@@ -6,6 +6,40 @@ WiMigrator is a command line tool designed with the following goals in mind:
 
 ![Build Status](https://dev.azure.com/vsts-wit/_apis/public/build/definitions/2a08f204-c80c-4f7e-82c8-f27e28f2becd/1/badge)
 
+# My To Do list
+* Create field mapping that can replace value with regex (Done)
+
+* Clean up the configuration class
+    * Create an interface
+    
+* Cleanup the WorkItemMigrationState classes
+    * Seems like there are multiple details that can be combined into a single WorkItemMigration object
+        * State
+        * TargetID
+        * RemoteLinks
+        
+* Fix the work item creation / update
+    * Validation gathers the work items (make this clearer?)
+    * Updates do not trigger for field updates, only phase 2 processors?
+    * skip-existing, to me, says update the target with the source, *overwrite*
+        * maybe make this clearer
+
+* Create an IdentityMapping option
+    * IdentityMapper should run before work item creation / update
+    * Look at the classes that exist for detecting invalid fields
+    * Make something similar for fields with identities
+    * Before work item create or update, replace identity fields with mapping
+    
+* Migrate comments
+    * Does comment migration happen?
+    * Make identity mapper work here too
+    
+ * Create multiple work item history attachment formats
+    * JSON is a poor choice for non-technical people (I assume it was the easiest... just upload the response from the api)
+    * Text
+    * XML?
+    * Word?
+
 # Features
 * Migrate the latest revision of a work item or set of work items based on the provided query, including:
   * Work item links (for work items within the query results set) 
