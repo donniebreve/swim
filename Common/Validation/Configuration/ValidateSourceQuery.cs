@@ -26,7 +26,7 @@ namespace Common.Validation
             QueryHierarchyItem query;
             try
             {
-                query = await WorkItemTrackingHelpers.GetQueryAsync(context.SourceClient.WorkItemTrackingHttpClient, context.Config.SourceConnection.Project, context.Config.Query);
+                query = await WorkItemTrackingHelpers.GetQueryAsync(context.SourceClient.WorkItemTrackingHttpClient, context.Configuration.SourceConnection.Project, context.Configuration.Query);
             }
             catch (Exception e)
             {
@@ -47,10 +47,10 @@ namespace Common.Validation
             {
                 var workItemUris = await WorkItemTrackingHelpers.GetWorkItemIdAndReferenceLinksAsync(
                     context.SourceClient.WorkItemTrackingHttpClient,
-                    context.Config.SourceConnection.Project,
-                    context.Config.Query,
-                    context.Config.SourcePostMoveTag,
-                    context.Config.QueryPageSize - 1 /* Have to subtract -1 from the page size due to a bug in how query interprets page size */);
+                    context.Configuration.SourceConnection.Project,
+                    context.Configuration.Query,
+                    context.Configuration.SourcePostMoveTag,
+                    context.Configuration.QueryPageSize - 1 /* Have to subtract -1 from the page size due to a bug in how query interprets page size */);
 
                     context.WorkItemIdsUris = new ConcurrentDictionary<int, string>(workItemUris);
             }

@@ -1,8 +1,8 @@
 ﻿using Newtonsoft.Json;
 
-namespace Common.Config
+namespace Common.Configuration.Json
 {
-    public class ConfigConnection
+    public class Connection : IConnection
     {
         [JsonProperty(Required = Required.Always)]
         public string Account { get; set; }

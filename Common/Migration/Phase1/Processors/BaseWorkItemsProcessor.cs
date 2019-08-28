@@ -1,11 +1,11 @@
-﻿using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using Common.Config;
+﻿using Common.Configuration;
 using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.VisualStudio.Services.Common;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Common.Migration
 {
@@ -15,7 +15,7 @@ namespace Common.Migration
 
         public abstract string Name { get; }
 
-        public abstract bool IsEnabled(ConfigJson config);
+        public abstract bool IsEnabled(IConfiguration configuration);
 
         public abstract IList<WorkItemMigrationState> GetWorkItemsAndStateToMigrate(IMigrationContext context);
 
@@ -37,13 +37,13 @@ namespace Common.Migration
             }
 
             Logger.LogInformation(LogDestination.All, $"{this.Name} will process {workItemsAndStateToMigrate.Count} work items on the target");
-            var preprocessors = ClientHelpers.GetProcessorInstances<IPhase1PreProcessor>(context.Config);
+            var preprocessors = ClientHelpers.GetProcessorInstances<IPhase1PreProcessor>(context.Configuration);
             foreach (var preprocessor in preprocessors)
             {
                 await preprocessor.Prepare(context);
             }
 
-            await workItemsAndStateToMigrate.Batch(Constants.BatchSize).ForEachAsync(context.Config.Parallelism, async (batchWorkItemsAndState, batchId) =>
+            await workItemsAndStateToMigrate.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (batchWorkItemsAndState, batchId) =>
             {
                 var batchStopwatch = Stopwatch.StartNew();
                 Logger.LogInformation(LogDestination.File, $"{this.Name} batch {batchId} of {totalNumberOfBatches}: Starting");

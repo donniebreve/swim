@@ -11,7 +11,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.Common;
-using Common.Config;
+using Common.Configuration;
 using Common.Migration;
 using Logging;
 
@@ -21,10 +21,9 @@ namespace Common
     {
         static ILogger Logger { get; } = MigratorLogging.CreateLogger<ClientHelpers>();
 
-        public static WorkItemClientConnection CreateClient(ConfigConnection connection)
+        public static WorkItemClientConnection CreateClient(IConnection connection)
         {
             Uri url = new Uri(connection.Account.TrimEnd('/'));
-
             VssCredentials credentials;
             if (connection.UseIntegratedAuth)
             {
@@ -34,7 +33,6 @@ namespace Common
             {
                 credentials = new VssBasicCredential("", connection.AccessToken);
             }
-
             return new WorkItemClientConnection(url, credentials);
         }
 
@@ -72,9 +70,9 @@ namespace Common
             }
         }
         
-        public static IEnumerable<T> GetProcessorInstances<T>(ConfigJson config) where T : IProcessor
+        public static IEnumerable<T> GetProcessorInstances<T>(IConfiguration configuration) where T : IProcessor
         {
-            return GetInstances<T>().Where(p => p.IsEnabled(config)).ToList();
+            return GetInstances<T>().Where(p => p.IsEnabled(configuration)).ToList();
         }
 
         public static IEnumerable<T> GetInstances<T>()

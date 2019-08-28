@@ -1,11 +1,11 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Common.Config;
+﻿using Common.Configuration;
 using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Common.Migration.Phase2Process
 {
@@ -16,7 +16,7 @@ namespace Common.Migration.Phase2Process
 
         public string Name => Constants.RelationPhaseClearAllRelations;
 
-        public bool IsEnabled(ConfigJson config)
+        public bool IsEnabled(IConfiguration configuration)
         {
             return true;
         }

@@ -6,7 +6,7 @@ using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using Logging;
 using Microsoft.VisualStudio.Services.Common;
-using Common.Config;
+using Common.Configuration;
 
 namespace Common.Migration
 {
@@ -16,9 +16,9 @@ namespace Common.Migration
 
         public string Name => Constants.RelationPhaseWorkItemLinks;
 
-        public bool IsEnabled(ConfigJson config)
+        public bool IsEnabled(IConfiguration configuration)
         {
-            return config.MoveLinks;
+            return configuration.MoveLinks;
         }
 
         public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
@@ -28,11 +28,11 @@ namespace Common.Migration
             {
                 var relations = GetWorkItemLinkRelations(migrationContext, sourceWorkItem.Relations);
                 var linkedIds = relations.Select(r => ClientHelpers.GetWorkItemIdFromApiEndpoint(r.Url));
-                var uris = linkedIds.Where(id => !migrationContext.SourceToTargetIds.ContainsKey(id)).Select(id => ClientHelpers.GetWorkItemApiEndpoint(migrationContext.Config.SourceConnection.Account, id));
+                var uris = linkedIds.Where(id => !migrationContext.SourceToTargetIds.ContainsKey(id)).Select(id => ClientHelpers.GetWorkItemApiEndpoint(migrationContext.Configuration.SourceConnection.Account, id));
                 linkedWorkItemArtifactUrls.AddRange(uris);
             }
 
-            await linkedWorkItemArtifactUrls.Batch(Constants.BatchSize).ForEachAsync(migrationContext.Config.Parallelism, async (workItemArtifactUris, batchId) =>
+            await linkedWorkItemArtifactUrls.Batch(Constants.BatchSize).ForEachAsync(migrationContext.Configuration.Parallelism, async (workItemArtifactUris, batchId) =>
             {
                 Logger.LogTrace(LogDestination.File, $"Finding linked work items on target for batch {batchId}");
                 var results = await ClientHelpers.QueryArtifactUriToGetIdsFromUris(migrationContext.TargetClient.WorkItemTrackingHttpClient, workItemArtifactUris);

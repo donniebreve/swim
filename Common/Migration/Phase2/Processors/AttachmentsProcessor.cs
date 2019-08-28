@@ -1,13 +1,13 @@
+using Common.Configuration;
+using Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
+using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Common.Config;
-using Logging;
-using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
-using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 
 namespace Common.Migration
 {
@@ -17,9 +17,9 @@ namespace Common.Migration
 
         public string Name => Constants.RelationPhaseAttachments;
 
-        public bool IsEnabled(ConfigJson config)
+        public bool IsEnabled(IConfiguration configuration)
         {
-            return config.MoveAttachments;
+            return configuration.MoveAttachments;
         }
 
         public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
@@ -51,7 +51,7 @@ namespace Common.Migration
                     }
                     else // is not on target
                     {
-                        AttachmentLink attachmentLink = await UploadAttachmentFromSourceRelation(migrationContext, batchContext, sourceWorkItem, sourceAttachmentWorkItemRelation, migrationContext.Config.MaxAttachmentSize);
+                        AttachmentLink attachmentLink = await UploadAttachmentFromSourceRelation(migrationContext, batchContext, sourceWorkItem, sourceAttachmentWorkItemRelation, migrationContext.Configuration.MaxAttachmentSize);
                         if (attachmentLink != null)
                         {
                             WorkItemRelation newAttachmentWorkItemRelation = new WorkItemRelation();
@@ -181,7 +181,7 @@ namespace Common.Migration
                         try
                         {
                             Logger.LogTrace(LogDestination.File, $"Uploading attachment {filename} of {resourceSize} bytes for source work item {sourceWorkItem.Id} from the source account");
-                            aRef = await WorkItemTrackingHelpers.CreateAttachmentChunkedAsync(migrationContext.TargetClient.WorkItemTrackingHttpClient, migrationContext.TargetClient.Connection, memstream, migrationContext.Config.AttachmentUploadChunkSize);
+                            aRef = await WorkItemTrackingHelpers.CreateAttachmentChunkedAsync(migrationContext.TargetClient.WorkItemTrackingHttpClient, migrationContext.TargetClient.Connection, memstream, migrationContext.Configuration.AttachmentUploadChunkSize);
                             Logger.LogTrace(LogDestination.File, $"Completed uploading attachment {filename} for source work item {sourceWorkItem.Id} from the source account");
                         }
                         catch (Exception e)

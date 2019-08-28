@@ -1,13 +1,12 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+﻿using Common.Configuration;
+using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
-using Logging;
-using Microsoft.VisualStudio.Services.Common;
-using Common.Config;
 using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace Common.Migration
 {
@@ -17,9 +16,9 @@ namespace Common.Migration
 
         public string Name => Constants.RelationPhaseRemoteLinks;
 
-        public bool IsEnabled(ConfigJson config)
+        public bool IsEnabled(IConfiguration configuration)
         {
-            return config.MoveLinks;
+            return configuration.MoveLinks;
         }
 
         public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)

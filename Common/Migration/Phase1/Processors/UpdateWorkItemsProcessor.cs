@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Common.Config;
+﻿using Common.Configuration;
 using Logging;
 using Microsoft.Extensions.Logging;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Common.Migration
 {
@@ -13,9 +13,9 @@ namespace Common.Migration
 
         public override string Name => "Update work items";
 
-        public override bool IsEnabled(ConfigJson config)
+        public override bool IsEnabled(IConfiguration configuration)
         {
-            return !config.SkipExisting;
+            return !configuration.SkipExisting;
         }
 
         public override IList<WorkItemMigrationState> GetWorkItemsAndStateToMigrate(IMigrationContext context)

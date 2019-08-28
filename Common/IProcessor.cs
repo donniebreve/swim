@@ -1,4 +1,4 @@
-using Common.Config;
+using Common.Configuration;
 
 namespace Common
 {
@@ -12,6 +12,6 @@ namespace Common
         /// <summary>
         /// Returns true if this processor should be invoked
         /// </summary>
-        bool IsEnabled(ConfigJson config);
+        bool IsEnabled(IConfiguration configuration);
     }
 }

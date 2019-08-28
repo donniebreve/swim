@@ -16,16 +16,16 @@ namespace Common.Validation
         {
             //if optional postmovetag is not specified, then we need only read permissions to the source account 
             //else if postmovetag is specified in the config file, then we will need write permissions to the source account 
-            if (String.IsNullOrEmpty(context.Config.SourcePostMoveTag))
+            if (String.IsNullOrEmpty(context.Configuration.SourcePostMoveTag))
             {
                 Logger.LogInformation(LogDestination.File, "Checking read permissions on the source project");
 
-                await ValidationHelpers.CheckReadPermission(context.SourceClient, context.Config.SourceConnection.Project);
+                await ValidationHelpers.CheckReadPermission(context.SourceClient, context.Configuration.SourceConnection.Project);
             }
             else
             {
                 Logger.LogInformation(LogDestination.File, "source-post-move-tag is specified, checking write permissions on the source project");
-                await ValidationHelpers.CheckBypassRulesPermission(context.SourceClient, context.Config.SourceConnection.Project);
+                await ValidationHelpers.CheckBypassRulesPermission(context.SourceClient, context.Configuration.SourceConnection.Project);
             }
         }
     }

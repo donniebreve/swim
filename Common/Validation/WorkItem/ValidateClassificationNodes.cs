@@ -21,7 +21,7 @@ namespace Common.Validation
 
             try
             {
-                var classificationNodes = await WorkItemTrackingHelpers.GetClassificationNodes(context.TargetClient.WorkItemTrackingHttpClient, context.Config.TargetConnection.Project);
+                var classificationNodes = await WorkItemTrackingHelpers.GetClassificationNodes(context.TargetClient.WorkItemTrackingHttpClient, context.Configuration.TargetConnection.Project);
                 var nodes = new AreaAndIterationPathTree(classificationNodes);
                 context.TargetAreaPaths = nodes.AreaPathList;
                 context.TargetIterationPaths = nodes.IterationPathList;
@@ -37,13 +37,13 @@ namespace Common.Validation
             var areaPath = (string)workItem.Fields[FieldNames.AreaPath];
             var iterationPath = (string)workItem.Fields[FieldNames.IterationPath];
 
-            if (!AreaAndIterationPathTree.TryReplaceLeadingProjectName(areaPath, context.Config.SourceConnection.Project, context.Config.TargetConnection.Project, out areaPath))
+            if (!AreaAndIterationPathTree.TryReplaceLeadingProjectName(areaPath, context.Configuration.SourceConnection.Project, context.Configuration.TargetConnection.Project, out areaPath))
             {
                 // This is a fatal error because this implies the query is cross project which we do not support, so bail out immediately
                 throw new ValidationException($"Could not find source project from area path {workItem.Fields[FieldNames.AreaPath]} for work item with id {workItem.Id}");
             }
 
-            if (!AreaAndIterationPathTree.TryReplaceLeadingProjectName(iterationPath, context.Config.SourceConnection.Project, context.Config.TargetConnection.Project, out iterationPath))
+            if (!AreaAndIterationPathTree.TryReplaceLeadingProjectName(iterationPath, context.Configuration.SourceConnection.Project, context.Configuration.TargetConnection.Project, out iterationPath))
             {
                 // This is a fatal error because this implies the query is cross project which we do not support, so bail out immediately
                 throw new ValidationException($"Could not find source project from iteration path {workItem.Fields[FieldNames.IterationPath]} for work item with id {workItem.Id}");
@@ -83,8 +83,8 @@ namespace Common.Validation
 
             // If we're skipping instead of using default values, add the work item to the skipped list
             // if it's area or iteration path does not exist on the target.
-            if ((context.Config.SkipWorkItemsWithMissingIterationPath && context.SkippedIterationPaths.Contains(iterationPath)) ||
-                (context.Config.SkipWorkItemsWithMissingAreaPath && context.SkippedAreaPaths.Contains(areaPath)))
+            if ((context.Configuration.SkipWorkItemsWithMissingIterationPath && context.SkippedIterationPaths.Contains(iterationPath)) ||
+                (context.Configuration.SkipWorkItemsWithMissingAreaPath && context.SkippedAreaPaths.Contains(areaPath)))
             {
                 context.SkippedWorkItems.Add(workItem.Id.Value);
             }

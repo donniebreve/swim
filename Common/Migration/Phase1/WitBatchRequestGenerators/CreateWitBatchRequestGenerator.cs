@@ -51,7 +51,7 @@ namespace Common.Migration
             jsonPatchDocument.Add(insertIdAddOperation);
 
             // add hyperlink to source WorkItem
-            string sourceWorkItemApiEndpoint = ClientHelpers.GetWorkItemApiEndpoint(this.migrationContext.Config.SourceConnection.Account, sourceWorkItem.Id.Value);
+            string sourceWorkItemApiEndpoint = ClientHelpers.GetWorkItemApiEndpoint(this.migrationContext.Configuration.SourceConnection.Account, sourceWorkItem.Id.Value);
             JsonPatchOperation addHyperlinkAddOperation = MigrationHelpers.GetHyperlinkAddOperation(sourceWorkItemApiEndpoint, sourceWorkItem.Rev.ToString());
             jsonPatchDocument.Add(addHyperlinkAddOperation);
 
@@ -62,7 +62,7 @@ namespace Common.Migration
             var witBatchRequest = new WitBatchRequest();
             witBatchRequest.Method = "PATCH";
             witBatchRequest.Headers = headers;
-            witBatchRequest.Uri = $"/{this.migrationContext.Config.TargetConnection.Project}/_apis/wit/workItems/${workItemType}?{this.QueryString}";
+            witBatchRequest.Uri = $"/{this.migrationContext.Configuration.TargetConnection.Project}/_apis/wit/workItems/${workItemType}?{this.QueryString}";
             witBatchRequest.Body = json;
 
             return witBatchRequest;

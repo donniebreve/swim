@@ -1,12 +1,12 @@
-﻿using System;
+﻿using Common.Configuration;
+using Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
-using Common.Config;
-using Logging;
 
 namespace Common.Migration
 {
@@ -17,7 +17,7 @@ namespace Common.Migration
 
         public string Name => "Inline images";
 
-        public bool IsEnabled(ConfigJson config)
+        public bool IsEnabled(IConfiguration configuration)
         {
             return true;
         }
@@ -84,7 +84,7 @@ namespace Common.Migration
                 // it ends up using the same inline attachment link.
                 if (!batchContext.SourceInlineImageUrlToTargetInlineImageGuid.ContainsKey(inlineImageUrl))
                 {
-                    string targetGuid = await UploadInlineImageAttachmentFromSourceWorkItemToTarget(batchContext, inlineImageUrl, sourceWorkItemId, context.Config.MaxAttachmentSize);
+                    string targetGuid = await UploadInlineImageAttachmentFromSourceWorkItemToTarget(batchContext, inlineImageUrl, sourceWorkItemId, context.Configuration.MaxAttachmentSize);
                     if (!String.IsNullOrEmpty(targetGuid))
                     {
                         batchContext.SourceInlineImageUrlToTargetInlineImageGuid.Add(inlineImageUrl, targetGuid);
@@ -162,7 +162,7 @@ namespace Common.Migration
                         try
                         {
                             Logger.LogTrace(LogDestination.File, $"Uploading inline image {inlineImageUrl} for source work item {sourceWorkItemId} from the source account");
-                            var aRef = await WorkItemTrackingHelpers.CreateAttachmentChunkedAsync(this.context.TargetClient.WorkItemTrackingHttpClient, this.context.TargetClient.Connection, memstream, this.context.Config.AttachmentUploadChunkSize);
+                            var aRef = await WorkItemTrackingHelpers.CreateAttachmentChunkedAsync(this.context.TargetClient.WorkItemTrackingHttpClient, this.context.TargetClient.Connection, memstream, this.context.Configuration.AttachmentUploadChunkSize);
                             targetGuid = aRef.Id.ToString();
                             Logger.LogTrace(LogDestination.File, $"Completed uploading inline image {inlineImageUrl} for source work item {sourceWorkItemId} from the source account");
                         }

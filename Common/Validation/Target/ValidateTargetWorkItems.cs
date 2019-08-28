@@ -27,7 +27,7 @@ namespace Common.Validation
         {
             this.ValidationContext = validationContext;
            
-            if (!validationContext.Config.SkipExisting)
+            if (!validationContext.Configuration.SkipExisting)
             {
                 var stopwatch = Stopwatch.StartNew();
                 Logger.LogInformation(LogDestination.File, "Started querying the target account to determine if the previously migrated work items have been updated on the source");
@@ -45,7 +45,7 @@ namespace Common.Validation
             var existingWorkItems = ValidationContext.WorkItemsMigrationState.Where(wi => wi.MigrationState == WorkItemMigrationState.State.Existing);
             var totalNumberOfBatches = ClientHelpers.GetBatchCount(existingWorkItems.Count(), Constants.BatchSize);
 
-            await existingWorkItems.Batch(Constants.BatchSize).ForEachAsync(ValidationContext.Config.Parallelism, async (batchWorkItemMigrationState, batchId) =>
+            await existingWorkItems.Batch(Constants.BatchSize).ForEachAsync(ValidationContext.Configuration.Parallelism, async (batchWorkItemMigrationState, batchId) =>
             {
                 var stopwatch = Stopwatch.StartNew();
                 Logger.LogInformation(LogDestination.File, $"{Name} batch {batchId} of {totalNumberOfBatches}: Started");
@@ -171,11 +171,11 @@ namespace Common.Validation
 
         private bool IsPhase2UpdateRequired(WorkItemMigrationState workItemMigrationState, WorkItem targetWorkItem)
         {
-            IEnumerable<IPhase2Processor> phase2Processors = ClientHelpers.GetProcessorInstances<IPhase2Processor>(ValidationContext.Config);
+            IEnumerable<IPhase2Processor> phase2Processors = ClientHelpers.GetProcessorInstances<IPhase2Processor>(ValidationContext.Configuration);
             workItemMigrationState.RevAndPhaseStatus = GetRevAndPhaseStatus(targetWorkItem, workItemMigrationState.SourceId);
 
             // find out if Enabled, see if matches comment from target
-            ISet<string> enabledPhaseStatuses = System.Linq.Enumerable.ToHashSet(phase2Processors.Where(a => a.IsEnabled(ValidationContext.Config)).Select(b => b.Name));
+            ISet<string> enabledPhaseStatuses = System.Linq.Enumerable.ToHashSet(phase2Processors.Where(a => a.IsEnabled(ValidationContext.Configuration)).Select(b => b.Name));
             enabledPhaseStatuses.Remove(Constants.RelationPhaseClearAllRelations);
 
             if (enabledPhaseStatuses.IsSubsetOf(workItemMigrationState.RevAndPhaseStatus.PhaseStatus)) // enabled relation phases are already complete for current work item

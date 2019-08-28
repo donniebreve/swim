@@ -74,7 +74,7 @@ namespace Common.Validation
             Logger.LogInformation($"{workItemsToCreateCount} work item(s) are new and will be migrated");
 
             var workItemsToUpdate = this.context.WorkItemsMigrationState.Where(w => w.MigrationState == WorkItemMigrationState.State.Existing && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1));
-            if (!context.Config.SkipExisting && workItemsToUpdate.Any())
+            if (!context.Configuration.SkipExisting && workItemsToUpdate.Any())
             {
                 Logger.LogInformation($"{workItemsToUpdate.Count()} work item(s) with field changes will be updated");
                 // logging details of existing work items to update the log file only
@@ -84,7 +84,7 @@ namespace Common.Validation
                     Logger.LogInformation(LogDestination.File, $"{item.SourceId} :: {item.TargetId}");
                 }
 
-                if (context.Config.MoveLinks)
+                if (context.Configuration.MoveLinks)
                 {
                     Logger.LogInformation("Move-Links is set to true, additional work items may be included for link processing if they had any link changes");
                 }
@@ -122,7 +122,7 @@ namespace Common.Validation
 
             var totalNumberOfBatches = ClientHelpers.GetBatchCount(context.WorkItemIdsUris.Count, Constants.BatchSize);
 
-            await context.WorkItemIdsUris.Keys.Batch(Constants.BatchSize).ForEachAsync(context.Config.Parallelism, async (workItemIds, batchId) =>
+            await context.WorkItemIdsUris.Keys.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemIds, batchId) =>
             {
                 var stopwatch = Stopwatch.StartNew();
                 Logger.LogInformation(LogDestination.File, $"Work item metadata validation batch {batchId} of {totalNumberOfBatches}: Starting");

@@ -184,7 +184,7 @@ namespace Common.Migration
               
         public static JsonPatchOperation GetWorkItemLinkAddOperation(IMigrationContext migrationContext, WorkItemLink workItemLink)
         {
-            string workItemEndpoint = ClientHelpers.GetWorkItemApiEndpoint(migrationContext.Config.TargetConnection.Account, workItemLink.Id);
+            string workItemEndpoint = ClientHelpers.GetWorkItemApiEndpoint(migrationContext.Configuration.TargetConnection.Account, workItemLink.Id);
 
             JsonPatchOperation jsonPatchOperation = new JsonPatchOperation();
             jsonPatchOperation.Operation = Operation.Add;

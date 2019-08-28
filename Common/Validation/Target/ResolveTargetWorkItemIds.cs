@@ -33,7 +33,7 @@ namespace Common.Validation
                 var stopwatch = Stopwatch.StartNew();
                 Logger.LogInformation(LogDestination.File, "Started querying target account to find previously migrated work items");
 
-                await workItemIdsUrisToClassify.Batch(Constants.BatchSize).ForEachAsync(context.Config.Parallelism, async (workItemIdsUris, batchId) =>
+                await workItemIdsUrisToClassify.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemIdsUris, batchId) =>
                 {
                     var batchStopwatch = Stopwatch.StartNew();
                     Logger.LogInformation(LogDestination.File, $"{Name} batch {batchId} of {totalNumberOfBatches}: Started");

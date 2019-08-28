@@ -34,10 +34,11 @@
   "clear-identity-display-names": false,
   "ensure-identities": false,
   "log-level-for-file": "information",
-  "field-replacements": {
-  },
+  "field-mappings": {},
+  "field-substitutions": {},
+  "field-replacements": {},
   "send-email-notification": true,
-  "email-notification": {
+  "email-settings": {
     "smtp-server": "127.0.0.1",
     "use-ssl": false,
     "port": "25",

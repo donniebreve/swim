@@ -1,7 +1,8 @@
 ﻿using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Moq;
-using Common.Config;
+using Common.Configuration;
 using Common.Migration;
+using Common.Configuration.Json;
 
 namespace UnitTests.Migration.Phase2.Processors
 {
@@ -19,9 +20,9 @@ namespace UnitTests.Migration.Phase2.Processors
         [TestMethod]
         public void GetUpdatedTagsFieldWithPostMove_ReturnsCorrectValue()
         {
-            ConfigJson Config = new ConfigJson();
-            Config.TargetPostMoveTag = "sample-post-move-tag";
-            this.MigrationContextMock.SetupGet(a => a.Config).Returns(Config);
+            IConfiguration configuration = new Configuration();
+            configuration.TargetPostMoveTag = "sample-post-move-tag";
+            this.MigrationContextMock.SetupGet(a => a.Configuration).Returns(configuration);
             string tagFieldValue = "originalTag";
             string expected = "originalTag; sample-post-move-tag";
 

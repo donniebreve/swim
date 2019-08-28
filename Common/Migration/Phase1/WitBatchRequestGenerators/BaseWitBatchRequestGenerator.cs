@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.WebApi.Patch;
 using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
-using Common.Config;
+using Common.Configuration;
 using Logging;
 
 namespace Common.Migration
@@ -103,7 +103,7 @@ namespace Common.Migration
                     KeyValuePair<string, object> preparedField = UpdateProjectNameIfNeededForField(sourceWorkItem, fieldProcessedForConfigFields);
                     
                     // TEMPORARY HACK for handling emoticons in identity fields:
-                    if (this.migrationContext.Config.ClearIdentityDisplayNames)
+                    if (this.migrationContext.Configuration.ClearIdentityDisplayNames)
                     {
                         preparedField = RemoveEmojis(sourceField, preparedField);
                     }
@@ -135,21 +135,22 @@ namespace Common.Migration
             string sourceFieldName = sourceField.Key;
             object sourceFieldValue = sourceField.Value;
 
-            if (migrationContext.Config.FieldReplacements != null)
+            if (this.migrationContext.Configuration.FieldReplacements != null)
             {
-                if (migrationContext.Config.FieldReplacements.ContainsKeyIgnoringCase(sourceFieldName))
-                {
-                    TargetFieldMap targetFieldMap = migrationContext.Config.FieldReplacements[sourceFieldName];
-                    if (targetFieldMap.Value != null)
-                    {
-                        newField = new KeyValuePair<string, object>(sourceFieldName, targetFieldMap.Value); // set targetField to value
-                    }
-                    else if (!string.IsNullOrEmpty(targetFieldMap.FieldReferenceName))
-                    {
-                        newField = new KeyValuePair<string, object>(targetFieldMap.FieldReferenceName, sourceFieldValue); // bring source value to specified target field
-                        fieldNamesAlreadyPopulated.Add(targetFieldMap.FieldReferenceName);
-                    }
-                }
+                // To do
+                //if (this.migrationContext.Configuration.FieldReplacements.ContainsKeyIgnoringCase(sourceFieldName))
+                //{
+                //    TargetFieldMap targetFieldMap = this.migrationContext.Configuration.FieldReplacements[sourceFieldName];
+                //    if (targetFieldMap.Value != null)
+                //    {
+                //        newField = new KeyValuePair<string, object>(sourceFieldName, targetFieldMap.Value); // set targetField to value
+                //    }
+                //    else if (!string.IsNullOrEmpty(targetFieldMap.FieldReferenceName))
+                //    {
+                //        newField = new KeyValuePair<string, object>(targetFieldMap.FieldReferenceName, sourceFieldValue); // bring source value to specified target field
+                //        fieldNamesAlreadyPopulated.Add(targetFieldMap.FieldReferenceName);
+                //    }
+                //}
             }
 
             return newField;
@@ -207,8 +208,8 @@ namespace Common.Migration
 
         private string BuildTargetInlineImageUrl(string sourceInlineImageUrl, string targetInlineImageGuid)
         {
-            string sourceAccount = this.migrationContext.Config.SourceConnection.Account;
-            string targetAccount = this.migrationContext.Config.TargetConnection.Account;
+            string sourceAccount = this.migrationContext.Configuration.SourceConnection.Account;
+            string targetAccount = this.migrationContext.Configuration.TargetConnection.Account;
             string result = sourceInlineImageUrl.Replace(sourceAccount, targetAccount);
             return MigrationHelpers.ReplaceAttachmentUrlGuid(result, targetInlineImageGuid);
         }
@@ -229,11 +230,11 @@ namespace Common.Migration
         protected KeyValuePair<string, object> CreateTargetField(WorkItem sourceWorkItem, KeyValuePair<string, object> sourceField)
         {
             KeyValuePair<string, object> targetField;
-            string targetProject = this.migrationContext.Config.TargetConnection.Project;
-            string sourceProject = this.migrationContext.Config.SourceConnection.Project;
+            string targetProject = this.migrationContext.Configuration.TargetConnection.Project;
+            string sourceProject = this.migrationContext.Configuration.SourceConnection.Project;
 
-            string defaultAreaPath = string.IsNullOrEmpty(this.migrationContext.Config.DefaultAreaPath) ? targetProject : this.migrationContext.Config.DefaultAreaPath;
-            string defaultIterationPath = string.IsNullOrEmpty(this.migrationContext.Config.DefaultIterationPath) ? targetProject : this.migrationContext.Config.DefaultIterationPath;
+            string defaultAreaPath = string.IsNullOrEmpty(this.migrationContext.Configuration.DefaultAreaPath) ? targetProject : this.migrationContext.Configuration.DefaultAreaPath;
+            string defaultIterationPath = string.IsNullOrEmpty(this.migrationContext.Configuration.DefaultIterationPath) ? targetProject : this.migrationContext.Configuration.DefaultIterationPath;
 
             // Make sure the new area path and iteration path exist on target before assigning them.
             // Otherwise assign targetProject

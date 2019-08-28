@@ -13,7 +13,7 @@ namespace Common.Validation
 
         public async Task Validate(IValidationContext context)
         {
-            await ValidationHelpers.CheckBypassRulesPermission(context.TargetClient, context.Config.TargetConnection.Project);
+            await ValidationHelpers.CheckBypassRulesPermission(context.TargetClient, context.Configuration.TargetConnection.Project);
         }
     }
 }

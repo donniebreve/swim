@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
-using Common.Config;
+using Common.Configuration;
 using Logging;
 
 namespace Common.Migration.Phase3.Processors
@@ -14,9 +14,9 @@ namespace Common.Migration.Phase3.Processors
 
         public string Name => Constants.RelationPhaseSourcePostMoveTags;
 
-        public bool IsEnabled(ConfigJson config)
+        public bool IsEnabled(IConfiguration configuration)
         {
-            return !string.IsNullOrEmpty(config.SourcePostMoveTag);
+            return !string.IsNullOrEmpty(configuration.SourcePostMoveTag);
         }
 
         public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
@@ -47,14 +47,14 @@ namespace Common.Migration.Phase3.Processors
             }
             else // Tags Field does not exist, so we add it here
             {
-                KeyValuePair<string, object> field = new KeyValuePair<string, object>(Constants.TagsFieldReferenceName, migrationContext.Config.SourcePostMoveTag);
+                KeyValuePair<string, object> field = new KeyValuePair<string, object>(Constants.TagsFieldReferenceName, migrationContext.Configuration.SourcePostMoveTag);
                 return MigrationHelpers.GetJsonPatchOperationAddForField(field);
             }
         }
 
         public string GetUpdatedTagsFieldWithPostMove(IMigrationContext migrationContext, string tagFieldValue)
         {
-            string postMoveTag = migrationContext.Config.SourcePostMoveTag;
+            string postMoveTag = migrationContext.Configuration.SourcePostMoveTag;
             return $"{tagFieldValue}; {postMoveTag}";
         }
     }

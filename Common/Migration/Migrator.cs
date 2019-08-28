@@ -41,7 +41,7 @@ namespace Common.Migration
         private async Task MigratePhase1()
         {
             Logger.LogInformation("Starting migration phase 1");
-            foreach (IPhase1Processor migrator in ClientHelpers.GetProcessorInstances<IPhase1Processor>(context.Config))
+            foreach (IPhase1Processor migrator in ClientHelpers.GetProcessorInstances<IPhase1Processor>(context.Configuration))
             {
                 var stopwatch = Stopwatch.StartNew();
                 Logger.LogInformation(LogDestination.File, $"Starting migration phase for: {migrator.Name}");
@@ -62,7 +62,7 @@ namespace Common.Migration
             IEnumerable<WorkItemMigrationState> successfulWorkItemMigrationStates;
 
             // when skip existing config flag is on and this work item was existing, continue to next work item.
-            if (context.Config.SkipExisting)
+            if (context.Configuration.SkipExisting)
             {
                 successfulWorkItemMigrationStates = context.WorkItemsMigrationState.Where(a => a.MigrationState == WorkItemMigrationState.State.Create);
             }
@@ -81,7 +81,7 @@ namespace Common.Migration
                 return;
             }
 
-            await successfulWorkItemMigrationStates.Batch(Constants.BatchSize).ForEachAsync(context.Config.Parallelism, async (workItemMigrationStateBatch, batchId) =>
+            await successfulWorkItemMigrationStates.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemMigrationStateBatch, batchId) =>
             {
                 Logger.LogTrace(LogDestination.File, $"Reading Phase 2 source and target work items for batch {batchId} of {totalNumberOfBatches}");
                 // make web call to get source and target work items
@@ -113,7 +113,7 @@ namespace Common.Migration
 
         private async Task MigratePhase3()
         {
-            IEnumerable<IPhase3Processor> phase3Processors = ClientHelpers.GetProcessorInstances<IPhase3Processor>(context.Config);
+            IEnumerable<IPhase3Processor> phase3Processors = ClientHelpers.GetProcessorInstances<IPhase3Processor>(context.Configuration);
             if (phase3Processors != null && !phase3Processors.Any())
             {
                 // nothing to do if no phase 3 processors are enabled
@@ -130,7 +130,7 @@ namespace Common.Migration
                 return;
             }
 
-            await successfullyMigratedWorkItemMigrationStates.Batch(Constants.BatchSize).ForEachAsync(context.Config.Parallelism, async (workItemMigrationStateBatch, batchId) =>
+            await successfullyMigratedWorkItemMigrationStates.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemMigrationStateBatch, batchId) =>
             {
                 IBatchMigrationContext batchContext = new BatchMigrationContext(batchId, workItemMigrationStateBatch);
                 IList<(int SourceId, WitBatchRequest WitBatchRequest)> sourceIdToWitBatchRequests = new List<(int SourceId, WitBatchRequest WitBatchRequest)>();
@@ -182,7 +182,7 @@ namespace Common.Migration
         private async Task<IList<(int SourceId, WitBatchRequest WitBatchRequest)>> GenerateWitBatchRequestsForPhase2Batch(IBatchMigrationContext batchContext, int batchId, IList<WorkItemMigrationState> workItemMigrationState, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
         {
             IList<(int SourceId, WitBatchRequest WitBatchRequest)> result = new List<(int SourceId, WitBatchRequest WitBatchRequest)>();
-            IEnumerable<IPhase2Processor> phase2Processors = ClientHelpers.GetProcessorInstances<IPhase2Processor>(context.Config);
+            IEnumerable<IPhase2Processor> phase2Processors = ClientHelpers.GetProcessorInstances<IPhase2Processor>(context.Configuration);
             foreach (IPhase2Processor processor in phase2Processors)
             {
                 Logger.LogInformation(LogDestination.File, $"Starting preprocessing of phase 2 step {processor.Name} for batch {batchId}");
@@ -202,7 +202,7 @@ namespace Common.Migration
 
                 WorkItemMigrationState state = workItemMigrationState.First(a => a.SourceId == sourceId);
                 state.RevAndPhaseStatus = GetRevAndPhaseStatus(targetWorkItem, sourceId);
-                ISet<string> enabledPhaseStatuses = System.Linq.Enumerable.ToHashSet(phase2Processors.Where(a => a.IsEnabled(context.Config)).Select(b => b.Name));
+                ISet<string> enabledPhaseStatuses = System.Linq.Enumerable.ToHashSet(phase2Processors.Where(a => a.IsEnabled(context.Configuration)).Select(b => b.Name));
                 enabledPhaseStatuses.Remove(Constants.RelationPhaseClearAllRelations);
 
                 foreach (IPhase2Processor processor in phase2Processors)

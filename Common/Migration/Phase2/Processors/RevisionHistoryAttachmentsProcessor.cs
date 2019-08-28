@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Common.Config;
+using Common.Configuration;
 using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
@@ -16,9 +16,9 @@ namespace Common.Migration
 
         public string Name => Constants.RelationPhaseRevisionHistoryAttachments;
 
-        public bool IsEnabled(ConfigJson config)
+        public bool IsEnabled(IConfiguration configuration)
         {
-            return config.MoveHistory;
+            return configuration.MoveHistory;
         }
 
         public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
@@ -42,7 +42,7 @@ namespace Common.Migration
         private async Task<IList<AttachmentLink>> UploadAttachmentsToTarget(IMigrationContext migrationContext, WorkItem sourceWorkItem)
         {
             var attachmentLinks = new List<AttachmentLink>();
-            int updateLimit = migrationContext.Config.MoveHistoryLimit;
+            int updateLimit = migrationContext.Configuration.MoveHistoryLimit;
             int updateCount = 0;
 
             while (updateCount < updateLimit)

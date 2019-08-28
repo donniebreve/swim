@@ -1,20 +1,26 @@
-﻿using System.Collections.Generic;
-using System.ComponentModel;
+﻿using Common.Serialization.Json;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using System.Collections.Generic;
+using System.ComponentModel;
 
-namespace Common.Config
+namespace Common.Configuration.Json
 {
-    public class ConfigJson
+    /// <summary>
+    /// The current application configuration.
+    /// </summary>
+    public class Configuration : IConfiguration
     {
         [JsonProperty(Required = Required.Always)]
         public string Query { get; set; }
 
+        [JsonConverter(typeof(ConcreteConverter<Connection>))]
         [JsonProperty(PropertyName = "source-connection", Required = Required.Always)]
-        public ConfigConnection SourceConnection { get; set; }
+        public IConnection SourceConnection { get; set; }
 
+        [JsonConverter(typeof(ConcreteConverter<Connection>))]
         [JsonProperty(PropertyName = "target-connection", Required = Required.Always)]
-        public ConfigConnection TargetConnection { get; set; }
+        public IConnection TargetConnection { get; set; }
 
         [JsonProperty(PropertyName = "parallelism", DefaultValueHandling = DefaultValueHandling.Populate)]
         public int Parallelism { get; set; }
@@ -98,14 +104,24 @@ namespace Common.Config
         [DefaultValue(LogLevel.Information)]
         public LogLevel LogLevelForFile { get; set; }
 
+        [JsonConverter(typeof(ConcreteConverter<FieldMapping>))]
+        [JsonProperty(PropertyName = "field-mappings", DefaultValueHandling = DefaultValueHandling.Populate)]
+        public List<IFieldMapping> FieldMappings { get; set; }
+
+        [JsonConverter(typeof(ConcreteConverter<FieldSubstitution>))]
+        [JsonProperty(PropertyName = "field-substitutions", DefaultValueHandling = DefaultValueHandling.Populate)]
+        public List<IFieldSubstitution> FieldSubstitutions { get; set; }
+
+        [JsonConverter(typeof(ConcreteConverter<FieldReplacement>))]
         [JsonProperty(PropertyName = "field-replacements", DefaultValueHandling = DefaultValueHandling.Populate)]
-        public Dictionary<string, TargetFieldMap> FieldReplacements { get; set; }
+        public List<IFieldReplacement> FieldReplacements { get; set; }
 
         [JsonProperty(PropertyName = "send-email-notification", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]
         public bool SendEmailNotification { get; set; }
 
-        [JsonProperty(PropertyName = "email-notification", Required = Required.DisallowNull)]
-        public EmailNotification EmailNotification { get; set; }
+        [JsonConverter(typeof(ConcreteConverter<EmailSettings>))]
+        [JsonProperty(PropertyName = "email-settings", Required = Required.DisallowNull)]
+        public IEmailSettings EmailSettings { get; set; }
     }
 }

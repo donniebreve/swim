@@ -1,8 +1,8 @@
-﻿using System;
+﻿using Common.Configuration;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Net;
 using System.Net.Mail;
-using Common.Config;
-using Microsoft.Extensions.Logging;
 
 namespace Logging
 {
@@ -14,10 +14,10 @@ namespace Logging
         {
         }
 
-        public void SendEmail(ConfigJson configJson, string body)
+        public void SendEmail(IConfiguration configuration, string body)
         {
-            bool sendEmailNotification = configJson.SendEmailNotification;
-            EmailNotification emailNotification = configJson.EmailNotification;
+            bool sendEmailNotification = configuration.SendEmailNotification;
+            IEmailSettings emailNotification = configuration.EmailSettings;
 
             // only proceed if sendEmailNotification && emailNotification != null
             if (sendEmailNotification && emailNotification == null)

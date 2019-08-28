@@ -1,13 +1,13 @@
+using Common.Configuration;
+using Logging;
+using Microsoft.Extensions.Logging;
+using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
+using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Logging;
-using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
-using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
-using Logging;
-using Common.Config;
 
 namespace Common.Migration
 {
@@ -17,9 +17,9 @@ namespace Common.Migration
 
         public string Name => Constants.RelationPhaseGitCommitLinks;
 
-        public bool IsEnabled(ConfigJson config)
+        public bool IsEnabled(IConfiguration configuration)
         {
-            return config.MoveGitLinks;
+            return configuration.MoveGitLinks;
         }
 
         public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
@@ -30,13 +30,13 @@ namespace Common.Migration
         public async Task<IEnumerable<JsonPatchOperation>> Process(IMigrationContext migrationContext, IBatchMigrationContext batchContext, WorkItem sourceWorkItem, WorkItem targetWorkItem)
         {
             IList<JsonPatchOperation> jsonPatchOperations = new List<JsonPatchOperation>();
-            IEnumerable<WorkItemRelation> sourceGitCommitLinksRelations = GetGitLinksRelationsFromWorkItem(sourceWorkItem, Constants.RelationArtifactLink, migrationContext.Config.SourceConnection.Account);
+            IEnumerable<WorkItemRelation> sourceGitCommitLinksRelations = GetGitLinksRelationsFromWorkItem(sourceWorkItem, Constants.RelationArtifactLink, migrationContext.Configuration.SourceConnection.Account);
 
             if (sourceGitCommitLinksRelations.Any())
             {
                 foreach (WorkItemRelation sourceGitCommitLinkRelation in sourceGitCommitLinksRelations)
                 {
-                    string adjustedUrl = ConvertGitCommitLinkToHyperLink(sourceWorkItem.Id.Value, sourceGitCommitLinkRelation.Url, migrationContext.Config.SourceConnection.Account);
+                    string adjustedUrl = ConvertGitCommitLinkToHyperLink(sourceWorkItem.Id.Value, sourceGitCommitLinkRelation.Url, migrationContext.Configuration.SourceConnection.Account);
                     WorkItemRelation targetGitCommitHyperlinkRelation = GetGitCommitHyperlinkIfExistsOnTarget(targetWorkItem, adjustedUrl);
 
                     if (targetGitCommitHyperlinkRelation != null) // is on target

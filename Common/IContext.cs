@@ -1,11 +1,11 @@
 ﻿using System.Collections.Concurrent;
-using Common.Config;
+using Common.Configuration;
 
 namespace Common
 {
     public interface IContext
     {
-        ConfigJson Config { get; }
+        IConfiguration Configuration { get; }
 
         WorkItemClientConnection SourceClient { get; }
 

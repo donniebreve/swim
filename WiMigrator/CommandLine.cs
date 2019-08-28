@@ -1,12 +1,14 @@
-﻿using System;
-using System.Threading.Tasks;
-using Common;
-using Common.Config;
+﻿using Common;
+using Common.Configuration;
+using Common.Configuration.Json;
 using Common.Migration;
+using Common.Serialization.Json;
 using Common.Validation;
 using Logging;
 using Microsoft.Extensions.CommandLineUtils;
 using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
 
 namespace WiMigrator
 {
@@ -71,15 +73,12 @@ namespace WiMigrator
         private async Task ExecuteValidation(CommandOption validate)
         {
             bool showedHelp = false;
-            ConfigJson configJson = null;
+            IConfiguration configuration = null;
             try
             {
-                string configFileName = validate.Value();
-                ConfigReaderJson configReaderJson = new ConfigReaderJson(configFileName);
-                configJson = configReaderJson.Deserialize();
-
-                var validatorContext = new ValidationContext(configJson);
-                using (var heartbeat = new ValidationHeartbeatLogger(validatorContext.WorkItemsMigrationState, validatorContext, validatorContext.Config.HeartbeatFrequencyInSeconds))
+                configuration = ConfigurationReader.LoadFromFile<Configuration, JsonSerializer>(validate.Value());
+                var validatorContext = new ValidationContext(configuration);
+                using (var heartbeat = new ValidationHeartbeatLogger(validatorContext.WorkItemsMigrationState, validatorContext, configuration.HeartbeatFrequencyInSeconds))
                 {
                     await new Validator(validatorContext).Validate();
                     heartbeat.Beat();
@@ -101,9 +100,9 @@ namespace WiMigrator
             }
             finally
             {
-                if (!showedHelp && configJson != null)
+                if (!showedHelp && configuration != null)
                 {
-                    SendSummaryEmail(configJson);
+                    SendSummaryEmail(configuration);
                 }
             }
         }
@@ -111,22 +110,19 @@ namespace WiMigrator
         private async Task ExecuteMigration(CommandOption migrate)
         {
             bool showedHelp = false;
-            ConfigJson configJson = null;
+            IConfiguration configuration = null;
             try
             {
-                string configFileName = migrate.Value();
-                ConfigReaderJson configReaderJson = new ConfigReaderJson(configFileName);
-                configJson = configReaderJson.Deserialize();
-
-                var validatorContext = new ValidationContext(configJson);
-                using (var heartbeat = new ValidationHeartbeatLogger(validatorContext.WorkItemsMigrationState, validatorContext, validatorContext.Config.HeartbeatFrequencyInSeconds))
+                configuration = ConfigurationReader.LoadFromFile<Configuration, JsonSerializer>(migrate.Value());
+                var validatorContext = new ValidationContext(configuration);
+                using (var heartbeat = new ValidationHeartbeatLogger(validatorContext.WorkItemsMigrationState, validatorContext, configuration.HeartbeatFrequencyInSeconds))
                 {
                     await new Validator(validatorContext).Validate();
                     heartbeat.Beat();
                 }
 
                 //TODO: Create a common method to take the validator context and created a migration context
-                var migrationContext = new MigrationContext(configJson);
+                var migrationContext = new MigrationContext(configuration);
 
                 migrationContext.WorkItemIdsUris = validatorContext.WorkItemIdsUris;
                 migrationContext.WorkItemTypes = validatorContext.TargetTypesAndFields;
@@ -140,7 +136,7 @@ namespace WiMigrator
                 migrationContext.SourceFields = validatorContext.SourceFields;
                 migrationContext.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject = validatorContext.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject;
 
-                using (var heartbeat = new MigrationHeartbeatLogger(migrationContext.WorkItemsMigrationState, migrationContext.Config.HeartbeatFrequencyInSeconds))
+                using (var heartbeat = new MigrationHeartbeatLogger(migrationContext.WorkItemsMigrationState, migrationContext.Configuration.HeartbeatFrequencyInSeconds))
                 {
                     await new Migrator(migrationContext).Migrate();
                     heartbeat.Beat();
@@ -166,9 +162,9 @@ namespace WiMigrator
             }
             finally
             {
-                if (!showedHelp && configJson != null)
+                if (!showedHelp && configuration != null)
                 {
-                    SendSummaryEmail(configJson);
+                    SendSummaryEmail(configuration);
                 }
             }
         }
@@ -181,11 +177,11 @@ namespace WiMigrator
             commandLineApplication.Execute(args);
         }
 
-        private void SendSummaryEmail(ConfigJson configJson)
+        private void SendSummaryEmail(IConfiguration configuration)
         {
             string logSummaryText = MigratorLogging.GetLogSummaryText();
             Emailer emailer = new Emailer();
-            emailer.SendEmail(configJson, logSummaryText);
+            emailer.SendEmail(configuration, logSummaryText);
         }
     }
 }

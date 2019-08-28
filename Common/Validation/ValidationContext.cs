@@ -1,13 +1,13 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.IO;
-using Common.Config;
+﻿using Common.Configuration;
 using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Newtonsoft.Json;
+using System;
+using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.IO;
 
 namespace Common.Validation
 {
@@ -65,18 +65,16 @@ namespace Common.Validation
             FieldNames.TeamProject
         });
 
-        public ValidationContext(ConfigJson configJson) : base(configJson)
+        public ValidationContext(IConfiguration configuration) : base(configuration)
         {
-            MigratorLogging.configMinimumLogLevel = this.Config.LogLevelForFile;
-
-            LogConfigData();
+            MigratorLogging.configMinimumLogLevel = configuration.LogLevelForFile;
+            this.LogConfigurationData(configuration);
         }
 
-        private void LogConfigData()
+        private void LogConfigurationData(IConfiguration configuration)
         {
             Logger.LogInformation("Config data:");
             MemoryStream stream = new MemoryStream();
-            
             using (StreamWriter sw = new StreamWriter(stream))
             {
                 using (JsonWriter writer = new JsonTextWriter(sw))
@@ -84,11 +82,9 @@ namespace Common.Validation
                     writer.Formatting = Formatting.Indented;
                     JsonSerializer serializer = new JsonSerializer();
                     serializer.NullValueHandling = NullValueHandling.Ignore;
-                    serializer.Serialize(writer, this.Config);
-
+                    serializer.Serialize(writer, configuration);
                     writer.Flush();
                     stream.Position = 0;
-                    
                     StreamReader sr = new StreamReader(stream);
                     string output = sr.ReadToEnd();
                     Logger.LogInformation(output);
@@ -96,8 +92,6 @@ namespace Common.Validation
             }
         }
 
-        public ValidationContext() : base()
-        {
-        }
+        public ValidationContext() : base() { }
     }
 }

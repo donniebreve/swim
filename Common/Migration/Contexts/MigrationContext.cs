@@ -2,7 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using Common.Config;
+using Common.Configuration;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 
 namespace Common.Migration
@@ -61,8 +61,6 @@ namespace Common.Migration
             "System.AreaLevel7"
         });
 
-        public MigrationContext(ConfigJson configJson) : base(configJson)
-        {
-        }
+        public MigrationContext(IConfiguration configuration) : base(configuration) { }
     }
 }

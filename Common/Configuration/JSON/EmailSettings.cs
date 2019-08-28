@@ -2,9 +2,9 @@
 using System.ComponentModel;
 using Newtonsoft.Json;
 
-namespace Common.Config
+namespace Common.Configuration.Json
 {
-    public class EmailNotification
+    public class EmailSettings : IEmailSettings
     {
         [JsonProperty(PropertyName = "smtp-server", Required = Required.Always)]
         public string SmtpServer { get; set; }
@@ -30,8 +30,10 @@ namespace Common.Config
         [JsonProperty(PropertyName = "password", Required = Required.DisallowNull)]
         public string Password { get; set; }
 
-        // used by JSON.NET to control weather or not Password gets serialized.
-        // JSON.NET just knows to apply it to Password because it’s in the method name.
+        /// <summary>
+        /// Determines if Newtonsoft.Json should serialize the field. 
+        /// </summary>
+        /// <returns>False</returns>
         public bool ShouldSerializePassword()
         {
             return false;

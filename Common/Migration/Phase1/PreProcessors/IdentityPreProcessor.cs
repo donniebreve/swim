@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-using Common.Config;
+﻿using Common.Configuration;
 using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.Framework.Common;
@@ -10,6 +7,9 @@ using Microsoft.VisualStudio.Services.Graph.Client;
 using Microsoft.VisualStudio.Services.Identity;
 using Microsoft.VisualStudio.Services.Identity.Client;
 using Microsoft.VisualStudio.Services.Licensing.Client;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 using static Microsoft.VisualStudio.Services.Graph.Constants;
 
 namespace Common.Migration
@@ -27,9 +27,9 @@ namespace Common.Migration
 
         public string Name => "Identity";
 
-        public bool IsEnabled(ConfigJson config)
+        public bool IsEnabled(IConfiguration configuration)
         {
-            return config.EnsureIdentities;
+            return configuration.EnsureIdentities;
         }
 
         public async Task Prepare(IMigrationContext context)

@@ -2,27 +2,13 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Text;
-using Common.Config;
+using Common.Configuration;
 
 namespace Common
 {
     public abstract class BaseContext : IContext
     {
-        public BaseContext(ConfigJson configJson)
-        {
-            this.Config = configJson;
-            this.SourceClient = ClientHelpers.CreateClient(configJson.SourceConnection);
-            this.TargetClient = ClientHelpers.CreateClient(configJson.TargetConnection);
-        }
-
-        /// <summary>
-        /// Constructor for test purposes
-        /// </summary>
-        public BaseContext()
-        { 
-        }
-
-        public ConfigJson Config { get; }
+        public IConfiguration Configuration { get; }
 
         public WorkItemClientConnection SourceClient { get; }
 
@@ -35,5 +21,17 @@ namespace Common
         public ConcurrentDictionary<int, int> SourceToTargetIds { get; set; } = new ConcurrentDictionary<int, int>();
 
         public ConcurrentSet<string> RemoteLinkRelationTypes { get; set; } = new ConcurrentSet<string>(StringComparer.CurrentCultureIgnoreCase);
+
+        public BaseContext(IConfiguration configuration)
+        {
+            this.Configuration = configuration;
+            this.SourceClient = ClientHelpers.CreateClient(configuration.SourceConnection);
+            this.TargetClient = ClientHelpers.CreateClient(configuration.TargetConnection);
+        }
+
+        /// <summary>
+        /// Constructor for test purposes
+        /// </summary>
+        public BaseContext() { }
     }
 }
