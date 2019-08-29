@@ -24,8 +24,8 @@ namespace Common.Validation
 
         private async Task VerifyRelationTypesExistsOnTarget(IValidationContext context)
         {
-            var sourceRelationTypes = await WorkItemTrackingHelpers.GetRelationTypesAsync(context.SourceClient.WorkItemTrackingHttpClient);
-            var targetRelationTypes = await WorkItemTrackingHelpers.GetRelationTypesAsync(context.TargetClient.WorkItemTrackingHttpClient);
+            var sourceRelationTypes = await WorkItemTrackingHelper.GetRelationTypesAsync(context.SourceClient.WorkItemTrackingHttpClient);
+            var targetRelationTypes = await WorkItemTrackingHelper.GetRelationTypesAsync(context.TargetClient.WorkItemTrackingHttpClient);
 
             foreach (var relationType in sourceRelationTypes)
             {

@@ -16,10 +16,19 @@ namespace Common.Configuration
         IConnection SourceConnection { get; set; }
 
         [DefaultValue(null)]
-        string Query { get; set; }
+        IConnection TargetConnection { get; set; }
 
         [DefaultValue(null)]
-        IConnection TargetConnection { get; set; }
+        string Query { get; set; }
+
+        [DefaultValue(true)]
+        bool CreateNewWorkItems { get; set; }
+
+        [DefaultValue(true)]
+        bool UpdateModifiedWorkItems { get; set; }
+
+        [DefaultValue(false)]
+        bool OverwriteWorkItems { get; set; }
 
         [DefaultValue(null)]
         int Parallelism { get; set; }
@@ -38,9 +47,6 @@ namespace Common.Configuration
 
         [DefaultValue(null)]
         int AttachmentUploadChunkSize { get; set; }
-
-        [DefaultValue(true)]
-        bool SkipExisting { get; set; }
 
         [DefaultValue(false)]
         bool MoveHistory { get; set; }

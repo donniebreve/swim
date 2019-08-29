@@ -13,7 +13,7 @@ namespace Common
             // only hyperlinks can contain the link to the source work item
             if (relation.Rel.Equals(Constants.Hyperlink, StringComparison.OrdinalIgnoreCase))
             {
-                var hyperlinkToSourceWorkItem = context.WorkItemIdsUris[sourceId];
+                var hyperlinkToSourceWorkItem = context.WorkItemMigrationStates[sourceId].SourceUri.ToString(); //context.WorkItemIdsUris[sourceId];
 
                 var sourceParts = Regex.Split(hyperlinkToSourceWorkItem, "/_apis/wit/workitems/", RegexOptions.IgnoreCase);
                 var targetParts = Regex.Split(relation.Url, "/_apis/wit/workitems/", RegexOptions.IgnoreCase);

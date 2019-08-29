@@ -142,7 +142,7 @@ namespace Common.Validation
             try
             {
                 securityHttpClient = client.Connection.GetClient<SecurityHttpClient>();
-                result = await WorkItemTrackingHelpers.GetClassificationNode(client.WorkItemTrackingHttpClient, project, TreeStructureGroup.Areas);
+                result = await WorkItemTrackingHelper.GetClassificationNode(client.WorkItemTrackingHttpClient, project, TreeStructureGroup.Areas);
             }
             catch (Exception e) when (e.InnerException is VssUnauthorizedException)
             {

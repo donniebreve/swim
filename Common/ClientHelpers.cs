@@ -92,7 +92,7 @@ namespace Common
                 ArtifactUris = artifactUris
             };
             
-            return await WorkItemTrackingHelpers.GetIdsForUrisAsync(client, artifactUriQuery);
+            return await WorkItemTrackingHelper.GetIdsForUrisAsync(client, artifactUriQuery);
         }
         
         public static bool GetMigratedWorkItemId(ArtifactUriQueryResult queryResult, KeyValuePair<int, string> workItem, out int id)
@@ -182,7 +182,9 @@ namespace Common
             }
             else
             {
-                state.MigrationState = WorkItemMigrationState.State.Error;
+                // To do
+                //state.MigrationState = WorkItemMigrationState.State.Error;
+
                 state.FailureReason |= failureReason;
             }
         }

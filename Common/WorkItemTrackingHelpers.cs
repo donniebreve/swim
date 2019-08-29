@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -16,11 +17,9 @@ using Newtonsoft.Json;
 
 namespace Common
 {
-    public class WorkItemTrackingHelpers
+    public class WorkItemTrackingHelper
     {
-        private static ILogger Logger { get; } = MigratorLogging.CreateLogger<WorkItemTrackingHelpers>();
-
-        private readonly static string[] queryFields = new string[] { FieldNames.Watermark };
+        private static ILogger Logger { get; } = MigratorLogging.CreateLogger<WorkItemTrackingHelper>();
 
         public static Task<List<WorkItemField>> GetFields(WorkItemTrackingHttpClient client)
         {
@@ -191,58 +190,61 @@ namespace Common
         }
 
         /// <summary>
-        /// Gets all the work item ids for the query, with special handling for the case when the query results
-        /// can exceed the result cap.
+        /// Gets all the work item ids for the query, with special handling for the case when the query results can exceed the result cap.
         /// </summary>
-        public async static Task<IDictionary<int, string>> GetWorkItemIdAndReferenceLinksAsync(WorkItemTrackingHttpClient client, string project, string queryName, string postMoveTag, int queryPageSize)
+        public async static Task<ConcurrentDictionary<int, WorkItemMigrationState>> GetWorkItemIdsUrisAsync(WorkItemTrackingHttpClient client, string project, string queryName, string postMoveTag, int queryPageSize)
         {
             Logger.LogInformation(LogDestination.File, $"Getting work item ids for {client.BaseAddress.Host}");
 
             var queryHierarchyItem = await GetQueryAsync(client, project, queryName);
-            var workItemIdsUris = new Dictionary<int, string>();
+            var workItemMigrationStates = new ConcurrentDictionary<int, WorkItemMigrationState>();
 
             var baseQuery = ParseQueryForPaging(queryHierarchyItem.Wiql, postMoveTag);
             var watermark = 0;
-            var id = 0;
+            string[] queryFields = new string[] { FieldNames.Watermark };
+            var lastID = 0;
             var page = 0;
 
             while (true)
             {
-                Logger.LogInformation(LogDestination.File, $"Getting work item ids page {page++} with last id {id} for {client.BaseAddress.Host}");
+                Logger.LogInformation(LogDestination.File, $"Querying work items for {client.BaseAddress.Host}, page {page++}, last id {lastID}");
 
                 var wiql = new Wiql
                 {
-                    Query = GetPageableQuery(baseQuery, watermark, id)
+                    Query = GetPageableQuery(baseQuery, watermark, lastID)
                 };
-
                 var queryResult = await RetryHelper.RetryAsync(async () =>
                 {
                     return await client.QueryByWiqlAsync(wiql, project: project, top: queryPageSize);
                 }, 5);
 
-                workItemIdsUris.AddRange(queryResult.WorkItems.Where(w => !workItemIdsUris.ContainsKey(w.Id)).ToDictionary(k => k.Id, v => RemoveProjectGuidFromUrl(v.Url)));
+                Logger.LogTrace(LogDestination.File, $"The query returned {queryResult.WorkItems.Count()} results");
 
-                Logger.LogTrace(LogDestination.File, $"Getting work item ids page {page} with last id {id} for {client.BaseAddress.Host} returned {queryResult.WorkItems.Count()} results and total result count is {workItemIdsUris.Count}");
-                
-                //keeping a list as well because the Dictionary doesnt guarantee ordering 
-                List<int> workItemIdsPage = queryResult.WorkItems.Select(k => k.Id).ToList();
-                if (!workItemIdsPage.Any())
+                // Check if there were any results
+                if (!queryResult.WorkItems.Any()) break;
+
+                foreach (var workItemReference in queryResult.WorkItems)
                 {
-                    break;
-                }
-                else
-                {
-                    id = workItemIdsPage.Last();
-                    var workItem = await RetryHelper.RetryAsync(async () =>
+                    if (!workItemMigrationStates.ContainsKey(workItemReference.Id))
                     {
-                        return await client.GetWorkItemAsync(id, queryFields);
-                    }, 5);
-
-                    watermark = (int)(long)workItem.Fields[FieldNames.Watermark];
+                        workItemMigrationStates[workItemReference.Id] = new WorkItemMigrationState()
+                        {
+                            SourceId = workItemReference.Id,
+                            SourceUri = new Uri(RemoveProjectGuidFromUrl(workItemReference.Url))
+                        };
+                    }
+                    lastID = workItemReference.Id;
                 }
-            }
 
-            return workItemIdsUris;
+                // Get the last work item's watermark
+                var workItem = await RetryHelper.RetryAsync(async () =>
+                {
+                    return await client.GetWorkItemAsync(lastID, queryFields);
+                }, 5);
+
+                watermark = Convert.ToInt32(workItem.Fields[FieldNames.Watermark]);
+            }
+            return workItemMigrationStates;
         }
 
         /// <summary>

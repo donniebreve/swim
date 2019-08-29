@@ -54,13 +54,11 @@ namespace Common.Migration
         protected bool WorkItemHasFailureState(WorkItem sourceWorkItem)
         {
             WorkItemMigrationState state = batchContext.WorkItemMigrationState.FirstOrDefault(a => a.SourceId == sourceWorkItem.Id.Value);
-
-            if (state != null && state.MigrationState == WorkItemMigrationState.State.Error)
+            if (state != null && state.FailureReason != FailureReason.None)
             {
                 Logger.LogWarning(LogDestination.File, $"Skipping migration of work item with id {sourceWorkItem.Id.Value} due to Error in migration state with failure reasons: {state.FailureReason.ToString()}");
                 return true;
             }
-
             return false;
         }
 

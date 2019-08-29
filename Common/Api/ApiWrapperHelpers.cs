@@ -116,17 +116,18 @@ namespace Common.ApiWrappers
             {
                 Logger.LogInformation(LogDestination.File, $"Checking if exception for {requestId} resulted in work items being migrated.");
 
-                var artifactUris = migrationContext.WorkItemIdsUris.Where(w => sourceIds.Contains(w.Key)).Select(w => w.Value);
-                var queryResult = await ClientHelpers.QueryArtifactUriToGetIdsFromUris(migrationContext.TargetClient.WorkItemTrackingHttpClient, artifactUris);
+                // To do: replace this with scanning the WorkItemMigrationStates list
+                //var artifactUris = migrationContext.WorkItemIdsUris.Where(w => sourceIds.Contains(w.Key)).Select(w => w.Value);
+                var queryResult = await ClientHelpers.QueryArtifactUriToGetIdsFromUris(migrationContext.TargetClient.WorkItemTrackingHttpClient, null);// artifactUris);
 
                 var anyWorkItemsCreated = false;
-                foreach (var idToUri in migrationContext.WorkItemIdsUris.Where(w => sourceIds.Contains(w.Key)))
-                {
-                    if (ClientHelpers.GetMigratedWorkItemId(queryResult, idToUri, out int migratedId))
-                    {
-                        anyWorkItemsCreated = true;
-                    }
-                }
+                //foreach (var idToUri in migrationContext.WorkItemIdsUris.Where(w => sourceIds.Contains(w.Key)))
+                //{
+                //    if (ClientHelpers.GetMigratedWorkItemId(queryResult, idToUri, out int migratedId))
+                //    {
+                //        anyWorkItemsCreated = true;
+                //    }
+                //}
 
                 if (anyWorkItemsCreated)
                 {

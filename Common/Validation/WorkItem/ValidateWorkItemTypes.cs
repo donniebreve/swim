@@ -27,7 +27,7 @@ namespace Common.Validation
             try
             {
                 // We need all fields to validate the field types
-                var sourceFields = (await WorkItemTrackingHelpers.GetFields(context.SourceClient.WorkItemTrackingHttpClient)).ToDictionary(key => key.ReferenceName);
+                var sourceFields = (await WorkItemTrackingHelper.GetFields(context.SourceClient.WorkItemTrackingHttpClient)).ToDictionary(key => key.ReferenceName);
                 context.SourceFields = new ConcurrentDictionary<string, WorkItemField>(sourceFields, StringComparer.CurrentCultureIgnoreCase);
             }
             catch (Exception e)
@@ -38,7 +38,7 @@ namespace Common.Validation
             try
             {
                 // We need all fields to validate the field types
-                var targetFields = (await WorkItemTrackingHelpers.GetFields(context.TargetClient.WorkItemTrackingHttpClient)).ToDictionary(key => key.ReferenceName);
+                var targetFields = (await WorkItemTrackingHelper.GetFields(context.TargetClient.WorkItemTrackingHttpClient)).ToDictionary(key => key.ReferenceName);
                 context.TargetFields = new ConcurrentDictionary<string, WorkItemField>(targetFields, StringComparer.CurrentCultureIgnoreCase);
                 context.IdentityFields = new HashSet<string>(targetFields.Where(f => f.Value.IsIdentity).Select(f => f.Key), StringComparer.CurrentCultureIgnoreCase);
             }
@@ -52,7 +52,7 @@ namespace Common.Validation
 
             try
             {
-                var workItemTypes = await WorkItemTrackingHelpers.GetWorkItemTypes(context.SourceClient.WorkItemTrackingHttpClient, context.Configuration.SourceConnection.Project);
+                var workItemTypes = await WorkItemTrackingHelper.GetWorkItemTypes(context.SourceClient.WorkItemTrackingHttpClient, context.Configuration.SourceConnection.Project);
                 foreach (var workItemType in workItemTypes)
                 {
                     context.SourceTypesAndFields[workItemType.Name] = new HashSet<string>(workItemType.Fields.Select(f => f.ReferenceName), StringComparer.CurrentCultureIgnoreCase);
@@ -65,7 +65,7 @@ namespace Common.Validation
                         
             try
             {
-                var workItemTypes = await WorkItemTrackingHelpers.GetWorkItemTypes(context.TargetClient.WorkItemTrackingHttpClient, context.Configuration.TargetConnection.Project);
+                var workItemTypes = await WorkItemTrackingHelper.GetWorkItemTypes(context.TargetClient.WorkItemTrackingHttpClient, context.Configuration.TargetConnection.Project);
                 foreach (var workItemType in workItemTypes)
                 {
                     context.TargetTypesAndFields[workItemType.Name] = new HashSet<string>(workItemType.Fields.Select(f => f.ReferenceName), StringComparer.CurrentCultureIgnoreCase);

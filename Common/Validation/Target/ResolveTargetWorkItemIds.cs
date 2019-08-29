@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Common.Migration;
 using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
@@ -22,39 +23,39 @@ namespace Common.Validation
             await ClassifyWorkItemIds(context);
         }
 
+        // To do: I do not think this belongs in validation
         private async Task ClassifyWorkItemIds(IValidationContext context)
         {
+            // To do: Find where SkippedWorkItems is created, and make sure it updates the action to none, then use action.none here
             // Remove all skipped work items to reduce the load of what we need to query
-            var workItemIdsUrisToClassify = context.WorkItemIdsUris.Where(wi => !context.SkippedWorkItems.Contains(wi.Key)).ToList();
-            var totalNumberOfBatches = ClientHelpers.GetBatchCount(workItemIdsUrisToClassify.Count(), Constants.BatchSize);
+            //var workItems = context.WorkItemIdsUris.Where(wi => !context.SkippedWorkItems.Contains(wi.Key)).ToList();
+            //if (workItemIdsUrisToClassify.Any())
+            //{
+            //    var stopwatch = Stopwatch.StartNew();
+            //    Logger.LogInformation(LogDestination.File, "Started querying target account to find previously migrated work items");
+            //    var totalNumberOfBatches = ClientHelpers.GetBatchCount(workItemIdsUrisToClassify.Count(), Constants.BatchSize);
+            //    await workItemIdsUrisToClassify.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemIdsUris, batchId) =>
+            //    {
+            //        var batchStopwatch = Stopwatch.StartNew();
+            //        Logger.LogInformation(LogDestination.File, $"{Name} batch {batchId} of {totalNumberOfBatches}: Started");
+            //        //check if the workitems have already been migrated and add the classified work items to the context
+            //        var migrationStates = await FilterWorkItemIds(context, context.TargetClient.WorkItemTrackingHttpClient, workItemIdsUris.ToDictionary(k => k.Key, v => v.Value));
 
-            if (workItemIdsUrisToClassify.Any())
-            {
-                var stopwatch = Stopwatch.StartNew();
-                Logger.LogInformation(LogDestination.File, "Started querying target account to find previously migrated work items");
+            //        if (migrationStates.Any())
+            //        {
+            //            foreach (var migrationState in migrationStates)
+            //            {
+            //                context.WorkItemMigrationStates.Add(migrationState);
+            //            }
+            //        }
 
-                await workItemIdsUrisToClassify.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemIdsUris, batchId) =>
-                {
-                    var batchStopwatch = Stopwatch.StartNew();
-                    Logger.LogInformation(LogDestination.File, $"{Name} batch {batchId} of {totalNumberOfBatches}: Started");
-                    //check if the workitems have already been migrated and add the classified work items to the context
-                    var migrationStates = await FilterWorkItemIds(context, context.TargetClient.WorkItemTrackingHttpClient, workItemIdsUris.ToDictionary(k => k.Key, v => v.Value));
+            //        batchStopwatch.Stop();
+            //        Logger.LogInformation(LogDestination.File, $"{Name} batch {batchId} of {totalNumberOfBatches}: Completed in {batchStopwatch.Elapsed.TotalSeconds}s");
+            //    });
 
-                    if (migrationStates.Any())
-                    {
-                        foreach (var migrationState in migrationStates)
-                        {
-                            context.WorkItemsMigrationState.Add(migrationState);
-                        }
-                    }
-
-                    batchStopwatch.Stop();
-                    Logger.LogInformation(LogDestination.File, $"{Name} batch {batchId} of {totalNumberOfBatches}: Completed in {batchStopwatch.Elapsed.TotalSeconds}s");
-                });
-
-                stopwatch.Stop();
-                Logger.LogInformation(LogDestination.File, $"Completed querying target account to find previously migrated work items in {stopwatch.Elapsed.TotalSeconds}s");
-            }
+            //    stopwatch.Stop();
+            //    Logger.LogInformation(LogDestination.File, $"Completed querying target account to find previously migrated work items in {stopwatch.Elapsed.TotalSeconds}s");
+            //}
         }
 
         private async Task<IList<WorkItemMigrationState>> FilterWorkItemIds(IValidationContext context, WorkItemTrackingHttpClient client, IDictionary<int, string> workItems)
@@ -73,11 +74,11 @@ namespace Common.Validation
                 {
                     if (ClientHelpers.GetMigratedWorkItemId(result, workItem, out int id))
                     {
-                        workItemStateList.Add(new WorkItemMigrationState { SourceId = workItem.Key, TargetId = id, MigrationState = WorkItemMigrationState.State.Existing });
+                        workItemStateList.Add(new WorkItemMigrationState { SourceId = workItem.Key, TargetId = id, MigrationAction = MigrationAction.Update });
                     }
                     else
                     {
-                        workItemStateList.Add(new WorkItemMigrationState { SourceId = workItem.Key, MigrationState = WorkItemMigrationState.State.Create });
+                        workItemStateList.Add(new WorkItemMigrationState { SourceId = workItem.Key, MigrationAction = MigrationAction.Create });
                     }
                 }
                 catch (Exception e)
@@ -85,7 +86,7 @@ namespace Common.Validation
                     //edge case where we find more than one workitems in the target for the workitem
                     Logger.LogError(LogDestination.File, e, e.Message);
                     //Add this workitem to notmigratedworkitem list 
-                    workItemStateList.Add(new WorkItemMigrationState { SourceId = workItem.Key, MigrationState = WorkItemMigrationState.State.Error });
+                    workItemStateList.Add(new WorkItemMigrationState { SourceId = workItem.Key, MigrationAction = MigrationAction.None });
                 }
             }
 

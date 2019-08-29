@@ -1,8 +1,7 @@
-﻿using System;
+﻿using Common.Configuration;
+using Common.Migration;
+using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Text;
-using Common.Configuration;
 
 namespace Common
 {
@@ -14,9 +13,12 @@ namespace Common
 
         public WorkItemClientConnection TargetClient { get; }
 
-        public ConcurrentDictionary<int, string> WorkItemIdsUris { get; set; }
+        /// <summary>
+        /// A collection of all the work items to be migrated.
+        /// </summary>
+        public ConcurrentDictionary<int, WorkItemMigrationState> WorkItemMigrationStates { get; set; } = new ConcurrentDictionary<int, WorkItemMigrationState>();
 
-        public ConcurrentBag<WorkItemMigrationState> WorkItemsMigrationState { get; set; } = new ConcurrentBag<WorkItemMigrationState>();
+
 
         public ConcurrentDictionary<int, int> SourceToTargetIds { get; set; } = new ConcurrentDictionary<int, int>();
 

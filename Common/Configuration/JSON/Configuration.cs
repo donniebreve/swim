@@ -11,9 +11,6 @@ namespace Common.Configuration.Json
     /// </summary>
     public class Configuration : IConfiguration
     {
-        [JsonProperty(Required = Required.Always)]
-        public string Query { get; set; }
-
         [JsonConverter(typeof(ConcreteConverter<Connection>))]
         [JsonProperty(PropertyName = "source-connection", Required = Required.Always)]
         public IConnection SourceConnection { get; set; }
@@ -21,6 +18,21 @@ namespace Common.Configuration.Json
         [JsonConverter(typeof(ConcreteConverter<Connection>))]
         [JsonProperty(PropertyName = "target-connection", Required = Required.Always)]
         public IConnection TargetConnection { get; set; }
+
+        [JsonProperty(Required = Required.Always)]
+        public string Query { get; set; }
+
+        [JsonProperty(PropertyName = "create-new-work-items", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(true)]
+        public bool CreateNewWorkItems { get; set; }
+
+        [JsonProperty(PropertyName = "update-modified-work-items", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(true)]
+        public bool UpdateModifiedWorkItems { get; set; }
+
+        [JsonProperty(PropertyName = "overwrite-work-items", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(false)]
+        public bool OverwriteWorkItems { get; set; }
 
         [JsonProperty(PropertyName = "parallelism", DefaultValueHandling = DefaultValueHandling.Populate)]
         public int Parallelism { get; set; }
@@ -43,10 +55,6 @@ namespace Common.Configuration.Json
         [JsonProperty(PropertyName = "attachment-upload-chunk-size", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(1 * 1024 * 1024)]
         public int AttachmentUploadChunkSize { get; set; }
-
-        [JsonProperty(PropertyName = "skip-existing", DefaultValueHandling = DefaultValueHandling.Populate)]
-        [DefaultValue(true)]
-        public bool SkipExisting { get; set; }
 
         [JsonProperty(PropertyName = "move-history", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]

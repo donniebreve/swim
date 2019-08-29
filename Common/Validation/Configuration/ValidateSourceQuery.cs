@@ -16,47 +16,19 @@ namespace Common.Validation
 
         public async Task Validate(IValidationContext context)
         {
-            await VerifyQueryExistsAndIsValid(context);
-            await RunQuery(context);
-        }
-
-        private async Task VerifyQueryExistsAndIsValid(IValidationContext context)
-        {
             Logger.LogInformation(LogDestination.File, "Checking if the migration query exists in the source project");
             QueryHierarchyItem query;
             try
             {
-                query = await WorkItemTrackingHelpers.GetQueryAsync(context.SourceClient.WorkItemTrackingHttpClient, context.Configuration.SourceConnection.Project, context.Configuration.Query);
+                query = await WorkItemTrackingHelper.GetQueryAsync(context.SourceClient.WorkItemTrackingHttpClient, context.Configuration.SourceConnection.Project, context.Configuration.Query);
             }
             catch (Exception e)
             {
                 throw new ValidationException("Unable to read the migration query", e);
             }
-
             if (query.QueryType != QueryType.Flat)
             {
                 throw new ValidationException("Only flat queries are supported for migration");
-            }
-        }
-
-        private async Task RunQuery(IValidationContext context)
-        {
-            Logger.LogInformation(LogDestination.File, "Running the migration query in the source project");
-
-            try
-            {
-                var workItemUris = await WorkItemTrackingHelpers.GetWorkItemIdAndReferenceLinksAsync(
-                    context.SourceClient.WorkItemTrackingHttpClient,
-                    context.Configuration.SourceConnection.Project,
-                    context.Configuration.Query,
-                    context.Configuration.SourcePostMoveTag,
-                    context.Configuration.QueryPageSize - 1 /* Have to subtract -1 from the page size due to a bug in how query interprets page size */);
-
-                    context.WorkItemIdsUris = new ConcurrentDictionary<int, string>(workItemUris);
-            }
-            catch (Exception e)
-            {
-                throw new ValidationException("Unable to run the migration query", e);
             }
         }
     }

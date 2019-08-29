@@ -1,10 +1,11 @@
-﻿using System;
+﻿using Common.Migration;
+using Common.Validation;
+using Logging;
+using Microsoft.Extensions.Logging;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
-using Microsoft.Extensions.Logging;
-using Common.Validation;
-using Logging;
 
 namespace Common
 {
@@ -12,83 +13,71 @@ namespace Common
     {
         static ILogger Logger { get; } = MigratorLogging.CreateLogger<ValidationHeartbeatLogger>();
 
-        private Timer timer;
-        private IEnumerable<WorkItemMigrationState> WorkItemMigrationStates;
-        private IValidationContext ValidationContext;
+        private IValidationContext _context;
+        private Timer _timer;
 
-        public ValidationHeartbeatLogger(IEnumerable<WorkItemMigrationState> workItemMigrationStates, IValidationContext validationContext, int heartbeatFrequencyInSeconds)
+        public ValidationHeartbeatLogger(IValidationContext context, int frequencyInSeconds)
         {
-            this.timer = new Timer(Beat, "Some state", TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(heartbeatFrequencyInSeconds));
-            this.WorkItemMigrationStates = workItemMigrationStates;
-            this.ValidationContext = validationContext;
+            this._context = context;
+            this._timer = new Timer(this.Beat, null, TimeSpan.FromSeconds(0), TimeSpan.FromSeconds(frequencyInSeconds));
         }
 
         public void Beat()
         {
-            Beat("Some state");
+            Beat(null);
         }
 
         private void Beat(object state)
         {
-            string line1 = "VALIDATION STATUS:";
-            string line2 = $"new work items found:                      {GetNewWorkItemsFound()}";
-            string line3 = $"existing work items found:                 {GetExistingWorkItemsFound()}";
-            string line4 = $"existing work items validated for phase 1: {GetExistingWorkItemsValidatedForPhase1()}";
-            string line5 = $"existing work items validated for phase 2: {GetExistingWorkItemsValidatedForPhase2()}";
+            string line1 = "VALIDATION STATUS UPDATE:";
+            string line2 = $"New work items found:                      {GetNewWorkItemsFound()}";
+            string line3 = $"Existing work items found:                 {GetExistingWorkItemsFound()}";
+            string line4 = $"Existing work items validated for phase 1: {GetExistingWorkItemsValidatedForPhase1()}";
+            string line5 = $"Existing work items validated for phase 2: {GetExistingWorkItemsValidatedForPhase2()}";
+            string line6 = $"Waiting for query to retrieve work items to be validated...";
 
-            string output = $"{line1}{Environment.NewLine}{line2}{Environment.NewLine}{line3}{Environment.NewLine}{line4}{Environment.NewLine}{line5}";
-
-            int? workItemsReturnedFromQuery = GetWorkItemsReturnedFromQuery();
-            string extraLine;
-
-            if (workItemsReturnedFromQuery != null)
+            int workItemCount = GetCurrentWorkItemCount();
+            if (workItemCount > 0)
             {
-                extraLine = $"total work items from query to validate:   {workItemsReturnedFromQuery}";
-            }
-            else
-            {
-                extraLine = $"Waiting for query to retrieve work items to be validated...";
+                line6 = $"Total work items retrieved from query:        {workItemCount}";
             }
 
-            output = $"{output}{Environment.NewLine}{extraLine}";
+            string output = $"{line1}{Environment.NewLine}{line2}{Environment.NewLine}{line3}{Environment.NewLine}{line4}{Environment.NewLine}{line5}{Environment.NewLine}{line6}";
             Logger.LogInformation(output);
         }
 
         public void Dispose()
         {
-            this.timer.Dispose();
+            this._timer.Dispose();
         }
 
         private int GetNewWorkItemsFound()
         {
-            return this.WorkItemMigrationStates.Where(w => w.MigrationState == WorkItemMigrationState.State.Create).Count();
+            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Create).Count();
         }
 
         private int GetExistingWorkItemsFound()
         {
-            return this.WorkItemMigrationStates.Where(w => w.MigrationState == WorkItemMigrationState.State.Existing).Count();
+            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Update).Count();
         }
 
         private int GetExistingWorkItemsValidatedForPhase1()
         {
-            return this.WorkItemMigrationStates.Where(w => w.MigrationState == WorkItemMigrationState.State.Existing && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1)).Count();
+            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1)).Count();
         }
 
         private int GetExistingWorkItemsValidatedForPhase2()
         {
-            return this.WorkItemMigrationStates.Where(w => w.MigrationState == WorkItemMigrationState.State.Existing && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase2)).Count();
+            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase2)).Count();
         }
 
-        private int? GetWorkItemsReturnedFromQuery()
+        private int GetCurrentWorkItemCount()
         {
-            if (this.ValidationContext.WorkItemIdsUris != null)
+            if (this._context.WorkItemMigrationStates != null)
             {
-                return this.ValidationContext.WorkItemIdsUris.Count();
+                return this._context.WorkItemMigrationStates.Count();
             }
-            else
-            {
-                return null;
-            }
+            return 0;
         }
     }
 }

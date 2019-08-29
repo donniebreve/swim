@@ -53,11 +53,15 @@ namespace Common.Migration
             headers.Add("Content-Type", "application/json-patch+json");
 
             JsonPatchDocument jsonPatchDocument = CreateJsonPatchDocumentFromWorkItemFields(sourceWorkItem);
-            
-            string hyperlink = this.migrationContext.WorkItemIdsUris[sourceWorkItem.Id.Value];
+
+            // To do: Not sure how to clean this one up yet, needs more investigation
+            string hyperlink = this.migrationContext.WorkItemMigrationStates[sourceWorkItem.Id.Value].SourceUri.ToString(); //this.migrationContext.WorkItemIdsUris[sourceWorkItem.Id.Value];
             object attributeId = migrationContext.TargetIdToSourceHyperlinkAttributeId[targetId];
 
-            JsonPatchOperation addHyperlinkWithCommentOperation = MigrationHelpers.GetHyperlinkAddOperation(hyperlink, sourceWorkItem.Rev.ToString(), attributeId);
+            JsonPatchOperation addHyperlinkWithCommentOperation = MigrationHelpers.GetHyperlinkAddOperation(
+                hyperlink,
+                sourceWorkItem.Rev.ToString(),
+                attributeId);
             jsonPatchDocument.Add(addHyperlinkWithCommentOperation);
 
             string json = JsonConvert.SerializeObject(jsonPatchDocument);

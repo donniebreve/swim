@@ -56,7 +56,7 @@ namespace Common.Migration
                     await stream.WriteAsync(stringBytes, 0, stringBytes.Length);
                     stream.Position = 0;
                     //upload the attachment to the target for each batch of workitem updates
-                    attachmentReference = await WorkItemTrackingHelpers.CreateAttachmentAsync(migrationContext.TargetClient.WorkItemTrackingHttpClient, stream);
+                    attachmentReference = await WorkItemTrackingHelper.CreateAttachmentAsync(migrationContext.TargetClient.WorkItemTrackingHttpClient, stream);
                     attachmentLinks.Add(
                         new AttachmentLink(
                             $"{Constants.WorkItemHistory}-{sourceWorkItem.Id}-{updateCount}.json", 
@@ -80,7 +80,7 @@ namespace Common.Migration
 
         private async Task<IList<WorkItemUpdate>> GetWorkItemUpdates(IMigrationContext migrationContext, WorkItem sourceWorkItem, int skip = 0)
         {
-            return await WorkItemTrackingHelpers.GetWorkItemUpdatesAsync(migrationContext.SourceClient.WorkItemTrackingHttpClient, sourceWorkItem.Id.Value, skip);
+            return await WorkItemTrackingHelper.GetWorkItemUpdatesAsync(migrationContext.SourceClient.WorkItemTrackingHttpClient, sourceWorkItem.Id.Value, skip);
         }
     }
 }

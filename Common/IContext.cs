@@ -1,5 +1,6 @@
 ﻿using System.Collections.Concurrent;
 using Common.Configuration;
+using Common.Migration;
 
 namespace Common
 {
@@ -11,11 +12,10 @@ namespace Common
 
         WorkItemClientConnection TargetClient { get; }
 
-        //Mapping of source work items to their url on the source
-        ConcurrentDictionary<int, string> WorkItemIdsUris { get; set; }
-
-        //State of all work items to migrate
-        ConcurrentBag<WorkItemMigrationState> WorkItemsMigrationState { get; set; }
+        /// <summary>
+        /// The state and information for all work items to migrate.
+        /// </summary>
+        ConcurrentDictionary<int, WorkItemMigrationState> WorkItemMigrationStates { get; set; }
 
         //remote relation types, do not need to exist on target since they're 
         //recreated as hyperlinks

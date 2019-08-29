@@ -115,7 +115,7 @@ namespace Common.Migration
             try
             {
                 Logger.LogTrace(LogDestination.File, $"Reading inline image {inlineImageUrl} for source work item {sourceWorkItemId} from the source account");
-                stream = await WorkItemTrackingHelpers.GetAttachmentAsync(this.context.SourceClient.WorkItemTrackingHttpClient, sourceGuid);
+                stream = await WorkItemTrackingHelper.GetAttachmentAsync(this.context.SourceClient.WorkItemTrackingHttpClient, sourceGuid);
                 Logger.LogTrace(LogDestination.File, $"Completed reading inline image {inlineImageUrl} for source work item {sourceWorkItemId} from the source account");
             }
             catch (Exception e)
@@ -162,7 +162,7 @@ namespace Common.Migration
                         try
                         {
                             Logger.LogTrace(LogDestination.File, $"Uploading inline image {inlineImageUrl} for source work item {sourceWorkItemId} from the source account");
-                            var aRef = await WorkItemTrackingHelpers.CreateAttachmentChunkedAsync(this.context.TargetClient.WorkItemTrackingHttpClient, this.context.TargetClient.Connection, memstream, this.context.Configuration.AttachmentUploadChunkSize);
+                            var aRef = await WorkItemTrackingHelper.CreateAttachmentChunkedAsync(this.context.TargetClient.WorkItemTrackingHttpClient, this.context.TargetClient.Connection, memstream, this.context.Configuration.AttachmentUploadChunkSize);
                             targetGuid = aRef.Id.ToString();
                             Logger.LogTrace(LogDestination.File, $"Completed uploading inline image {inlineImageUrl} for source work item {sourceWorkItemId} from the source account");
                         }

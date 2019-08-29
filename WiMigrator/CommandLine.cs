@@ -77,10 +77,10 @@ namespace WiMigrator
             try
             {
                 configuration = ConfigurationReader.LoadFromFile<Configuration, JsonSerializer>(validate.Value());
-                var validatorContext = new ValidationContext(configuration);
-                using (var heartbeat = new ValidationHeartbeatLogger(validatorContext.WorkItemsMigrationState, validatorContext, configuration.HeartbeatFrequencyInSeconds))
+                var context = new ValidationContext(configuration);
+                using (var heartbeat = new ValidationHeartbeatLogger(context, configuration.HeartbeatFrequencyInSeconds))
                 {
-                    await new Validator(validatorContext).Validate();
+                    await new Validator(context).Validate();
                     heartbeat.Beat();
                 }
             }
@@ -115,30 +115,30 @@ namespace WiMigrator
             {
                 configuration = ConfigurationReader.LoadFromFile<Configuration, JsonSerializer>(migrate.Value());
                 var validatorContext = new ValidationContext(configuration);
-                using (var heartbeat = new ValidationHeartbeatLogger(validatorContext.WorkItemsMigrationState, validatorContext, configuration.HeartbeatFrequencyInSeconds))
+                using (var heartbeat = new ValidationHeartbeatLogger(validatorContext, configuration.HeartbeatFrequencyInSeconds))
                 {
                     await new Validator(validatorContext).Validate();
                     heartbeat.Beat();
                 }
 
                 //TODO: Create a common method to take the validator context and created a migration context
-                var migrationContext = new MigrationContext(configuration);
+                var context = new MigrationContext(configuration);
 
-                migrationContext.WorkItemIdsUris = validatorContext.WorkItemIdsUris;
-                migrationContext.WorkItemTypes = validatorContext.TargetTypesAndFields;
-                migrationContext.IdentityFields = validatorContext.IdentityFields;
-                migrationContext.TargetAreaPaths = validatorContext.TargetAreaPaths;
-                migrationContext.TargetIterationPaths = validatorContext.TargetIterationPaths;
-                migrationContext.WorkItemsMigrationState = validatorContext.WorkItemsMigrationState;
-                migrationContext.TargetIdToSourceHyperlinkAttributeId = validatorContext.TargetIdToSourceHyperlinkAttributeId;
-                migrationContext.ValidatedWorkItemLinkRelationTypes = validatorContext.ValidatedWorkItemLinkRelationTypes;
-                migrationContext.RemoteLinkRelationTypes = validatorContext.RemoteLinkRelationTypes;
-                migrationContext.SourceFields = validatorContext.SourceFields;
-                migrationContext.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject = validatorContext.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject;
+                context.WorkItemMigrationStates = validatorContext.WorkItemMigrationStates;
+                context.WorkItemTypes = validatorContext.TargetTypesAndFields;
+                context.IdentityFields = validatorContext.IdentityFields;
+                context.TargetAreaPaths = validatorContext.TargetAreaPaths;
+                context.TargetIterationPaths = validatorContext.TargetIterationPaths;
+                context.WorkItemMigrationStates = validatorContext.WorkItemMigrationStates;
+                context.TargetIdToSourceHyperlinkAttributeId = validatorContext.TargetIdToSourceHyperlinkAttributeId;
+                context.ValidatedWorkItemLinkRelationTypes = validatorContext.ValidatedWorkItemLinkRelationTypes;
+                context.RemoteLinkRelationTypes = validatorContext.RemoteLinkRelationTypes;
+                context.SourceFields = validatorContext.SourceFields;
+                context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject = validatorContext.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject;
 
-                using (var heartbeat = new MigrationHeartbeatLogger(migrationContext.WorkItemsMigrationState, migrationContext.Configuration.HeartbeatFrequencyInSeconds))
+                using (var heartbeat = new MigrationHeartbeatLogger(context, context.Configuration.HeartbeatFrequencyInSeconds))
                 {
-                    await new Migrator(migrationContext).Migrate();
+                    await new Migrator(context).Migrate();
                     heartbeat.Beat();
                 }
             }

@@ -26,8 +26,7 @@ namespace Common.Validation
         public async Task Validate(IValidationContext validationContext)
         {
             this.ValidationContext = validationContext;
-           
-            if (!validationContext.Configuration.SkipExisting)
+            if (validationContext.Configuration.UpdateModifiedWorkItems)
             {
                 var stopwatch = Stopwatch.StartNew();
                 Logger.LogInformation(LogDestination.File, "Started querying the target account to determine if the previously migrated work items have been updated on the source");
@@ -35,14 +34,14 @@ namespace Common.Validation
                 await PopulateWorkItemMigrationState();
 
                 stopwatch.Stop();
-                Logger.LogInformation(LogDestination.File, $"Completed querying the target account in {stopwatch.Elapsed.TotalSeconds}s, {this.ValidationContext.WorkItemsMigrationState.Count(w => w.MigrationState == WorkItemMigrationState.State.Existing && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1))} work item(s) have been updated in the source");
+                Logger.LogInformation(LogDestination.File, $"Completed querying the target account in {stopwatch.Elapsed.TotalSeconds}s, {this.ValidationContext.WorkItemMigrationStates.Values.Count(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1))} work item(s) have been updated in the source");
             }
         }
 
         private async Task PopulateWorkItemMigrationState()
         {
             //dictionary of target workitem id to source id - these workitems have been migrated before
-            var existingWorkItems = ValidationContext.WorkItemsMigrationState.Where(wi => wi.MigrationState == WorkItemMigrationState.State.Existing);
+            var existingWorkItems = ValidationContext.WorkItemMigrationStates.Values.Where(wi => wi.MigrationAction == MigrationAction.Update);
             var totalNumberOfBatches = ClientHelpers.GetBatchCount(existingWorkItems.Count(), Constants.BatchSize);
 
             await existingWorkItems.Batch(Constants.BatchSize).ForEachAsync(ValidationContext.Configuration.Parallelism, async (batchWorkItemMigrationState, batchId) =>
@@ -53,7 +52,7 @@ namespace Common.Validation
                 Dictionary<int, WorkItemMigrationState> targetToWorkItemMigrationState = batchWorkItemMigrationState.ToDictionary(k => k.TargetId.Value, v => v);
 
                 //read the target work items 
-                IList<WorkItem> targetWorkItems = await WorkItemTrackingHelpers.GetWorkItemsAsync(ValidationContext.TargetClient.WorkItemTrackingHttpClient, batchWorkItemMigrationState.Select(a => a.TargetId.Value).ToList(), expand: WorkItemExpand.Relations);
+                IList<WorkItem> targetWorkItems = await WorkItemTrackingHelper.GetWorkItemsAsync(ValidationContext.TargetClient.WorkItemTrackingHttpClient, batchWorkItemMigrationState.Select(a => a.TargetId.Value).ToList(), expand: WorkItemExpand.Relations);
 
                 IDictionary<int, WorkItemRelation> targetIdToHyperlinkToSourceRelationMapping = GetTargetIdToHyperlinkToSourceRelationMapping(targetWorkItems, targetToWorkItemMigrationState);
 
@@ -133,7 +132,7 @@ namespace Common.Validation
                 if (targetWorkItem.Relations == null)
                 {
                     Logger.LogError(LogDestination.File, $"Target work item with Id: {targetWorkItem.Id} has no relations. Migration will be skipped for it.");
-                    workItemMigrationState.MigrationState = WorkItemMigrationState.State.Error;
+                    workItemMigrationState.MigrationAction = MigrationAction.None;
                     return;
                 }
 
@@ -146,27 +145,28 @@ namespace Common.Validation
 
         private void ProcessUpdatedSourceWorkItem(WorkItem targetWorkItem, WorkItemMigrationState workItemMigrationState, WorkItemRelation hyperlinkToSourceRelation)
         {
-            //get the source rev from the revision dictionary - populated by PostValidateWorkitems
-            int sourceId = workItemMigrationState.SourceId;
-            int sourceRev = ValidationContext.SourceWorkItemRevision[sourceId];
-            string sourceUrl = ValidationContext.WorkItemIdsUris[sourceId];
-            int targetRev = GetRev(this.ValidationContext, targetWorkItem, sourceId, hyperlinkToSourceRelation);
+            // To do
+            ////get the source rev from the revision dictionary - populated by PostValidateWorkitems
+            //int sourceId = workItemMigrationState.SourceId;
+            //int sourceRev = ValidationContext.SourceWorkItemRevision[sourceId];
+            //string sourceUrl = ValidationContext.WorkItemIdsUris[sourceId];
+            //int targetRev = GetRev(this.ValidationContext, targetWorkItem, sourceId, hyperlinkToSourceRelation);
 
-            if (IsDifferenceInRevNumbers(sourceId, targetWorkItem, hyperlinkToSourceRelation, targetRev))
-            {
-                Logger.LogInformation(LogDestination.File, $"Source workItem {sourceId} Rev {sourceRev} Target workitem {targetWorkItem.Id} Rev {targetRev}");
-                this.sourceWorkItemIdsThatHaveBeenUpdated.Add(sourceId);
-                workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase1;
-                workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
-            }
-            else if (IsPhase2UpdateRequired(workItemMigrationState, targetWorkItem))
-            {
-                workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
-            }
-            else
-            {
-                workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.None;
-            }
+            //if (IsDifferenceInRevNumbers(sourceId, targetWorkItem, hyperlinkToSourceRelation, targetRev))
+            //{
+            //    Logger.LogInformation(LogDestination.File, $"Source workItem {sourceId} Rev {sourceRev} Target workitem {targetWorkItem.Id} Rev {targetRev}");
+            //    this.sourceWorkItemIdsThatHaveBeenUpdated.Add(sourceId);
+            //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase1;
+            //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
+            //}
+            //else if (IsPhase2UpdateRequired(workItemMigrationState, targetWorkItem))
+            //{
+            //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
+            //}
+            //else
+            //{
+            //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.None;
+            //}
         }
 
         private bool IsPhase2UpdateRequired(WorkItemMigrationState workItemMigrationState, WorkItem targetWorkItem)

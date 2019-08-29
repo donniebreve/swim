@@ -140,7 +140,7 @@ namespace Common.Migration
                     try
                     {
                         Logger.LogTrace(LogDestination.File, $"Reading attachment {filename} for source work item {sourceWorkItem.Id} from the source account");
-                        stream = await WorkItemTrackingHelpers.GetAttachmentAsync(migrationContext.SourceClient.WorkItemTrackingHttpClient, attachmentId);
+                        stream = await WorkItemTrackingHelper.GetAttachmentAsync(migrationContext.SourceClient.WorkItemTrackingHttpClient, attachmentId);
                         Logger.LogTrace(LogDestination.File, $"Completed reading attachment {filename} for source work item {sourceWorkItem.Id} from the source account");
                     }
                     catch (Exception e)
@@ -181,7 +181,7 @@ namespace Common.Migration
                         try
                         {
                             Logger.LogTrace(LogDestination.File, $"Uploading attachment {filename} of {resourceSize} bytes for source work item {sourceWorkItem.Id} from the source account");
-                            aRef = await WorkItemTrackingHelpers.CreateAttachmentChunkedAsync(migrationContext.TargetClient.WorkItemTrackingHttpClient, migrationContext.TargetClient.Connection, memstream, migrationContext.Configuration.AttachmentUploadChunkSize);
+                            aRef = await WorkItemTrackingHelper.CreateAttachmentChunkedAsync(migrationContext.TargetClient.WorkItemTrackingHttpClient, migrationContext.TargetClient.Connection, memstream, migrationContext.Configuration.AttachmentUploadChunkSize);
                             Logger.LogTrace(LogDestination.File, $"Completed uploading attachment {filename} for source work item {sourceWorkItem.Id} from the source account");
                         }
                         catch (Exception e)

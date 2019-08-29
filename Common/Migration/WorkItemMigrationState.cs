@@ -1,19 +1,21 @@
 ﻿using System;
-using Common.Migration;
 
-namespace Common
+namespace Common.Migration
 {
     public class WorkItemMigrationState
     {
         public int SourceId { get; set; }
         public int? TargetId { get; set; }
 
+        public Uri SourceUri { get; set; }
+        public Uri TargetUri { get; set; }
+
+        public MigrationAction MigrationAction { get; set; }
+
         public FailureReason FailureReason { get; set; }
 
-        public State MigrationState { get; set; }
         public RequirementForExisting Requirement { get; set; }
         public MigrationCompletionStatus MigrationCompleted { get; set; }
-        public enum State { Create, Existing, Error }
 
         [Flags]
         public enum RequirementForExisting { None, UpdatePhase1, UpdatePhase2 }
