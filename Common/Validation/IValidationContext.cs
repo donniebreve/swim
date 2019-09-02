@@ -50,8 +50,6 @@ namespace Common.Validation
         
         ConcurrentSet<string> ValidatedWorkItemLinkRelationTypes { get; set; }
 
-        ConcurrentSet<int> SkippedWorkItems { get; }
-
         IList<string> FieldsThatRequireSourceProjectToBeReplacedWithTargetProject { get; }
     }
 }

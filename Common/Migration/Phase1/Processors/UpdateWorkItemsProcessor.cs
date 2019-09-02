@@ -20,7 +20,7 @@ namespace Common.Migration
 
         public override IList<WorkItemMigrationState> GetWorkItemsAndStateToMigrate(IMigrationContext context)
         {
-            return context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1)).ToList();
+            return context.WorkItemMigrationStates.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1)).ToList();
         }
 
         public override void PrepareBatchContext(IBatchMigrationContext batchContext, IList<WorkItemMigrationState> workItemsAndStateToMigrate)

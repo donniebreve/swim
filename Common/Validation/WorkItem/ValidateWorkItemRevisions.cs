@@ -3,6 +3,7 @@ using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 
 namespace Common.Validation
 {
+    [RunOrder(1)]
     public class ValidateWorkItemRevisions : IWorkItemValidator
     {
         public string Name => "Work item revisions";
@@ -13,7 +14,8 @@ namespace Common.Validation
 
         public async Task Validate(IValidationContext context, WorkItem workItem)
         {
-            context.SourceWorkItemRevision.TryAdd(workItem.Id.Value, workItem.Rev.Value);
+            context.GetWorkItemMigrationState(workItem.Id.Value).SourceRevision = workItem.Rev.Value;
+            //context.SourceWorkItemRevision.TryAdd(workItem.Id.Value, workItem.Rev.Value);
         }
     }
 }

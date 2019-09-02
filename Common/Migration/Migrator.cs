@@ -10,6 +10,7 @@ using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using Newtonsoft.Json;
 using Common.ApiWrappers;
 using Logging;
+using Common.Api;
 
 namespace Common.Migration
 {
@@ -84,8 +85,8 @@ namespace Common.Migration
             {
                 Logger.LogTrace(LogDestination.File, $"Reading Phase 2 source and target work items for batch {batchId} of {totalNumberOfBatches}");
                 // make web call to get source and target work items
-                IList<WorkItem> sourceWorkItemsInBatch = await WorkItemTrackingHelper.GetWorkItemsAsync(_context.SourceClient.WorkItemTrackingHttpClient, workItemMigrationStateBatch.Select(a => a.SourceId).ToList(), expand: WorkItemExpand.All);
-                IList<WorkItem> targetWorkItemsInBatch = await WorkItemTrackingHelper.GetWorkItemsAsync(_context.TargetClient.WorkItemTrackingHttpClient, workItemMigrationStateBatch.Select(a => a.TargetId.Value).ToList(), expand: WorkItemExpand.Relations);
+                IList<WorkItem> sourceWorkItemsInBatch = await WorkItemApi.GetWorkItemsAsync(_context.SourceClient.WorkItemTrackingHttpClient, workItemMigrationStateBatch.Select(a => a.SourceId).ToList(), expand: WorkItemExpand.All);
+                IList<WorkItem> targetWorkItemsInBatch = await WorkItemApi.GetWorkItemsAsync(_context.TargetClient.WorkItemTrackingHttpClient, workItemMigrationStateBatch.Select(a => a.TargetId.Value).ToList(), expand: WorkItemExpand.Relations);
 
                 IBatchMigrationContext batchContext = new BatchMigrationContext(batchId, workItemMigrationStateBatch);
                 batchContext.SourceWorkItemIdToTargetWorkItemIdMapping = workItemMigrationStateBatch.ToDictionary(key => key.SourceId, value => value.TargetId.Value);
@@ -120,7 +121,7 @@ namespace Common.Migration
             }
 
             // Phase1 or Phase2 have completed, and FailureReason == None
-            IEnumerable<WorkItemMigrationState> successfullyMigratedWorkItemMigrationStates = _context.WorkItemMigrationStates.Values.Where(w => (w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase1) || w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase2)) && w.FailureReason == FailureReason.None);
+            IEnumerable<WorkItemMigrationState> successfullyMigratedWorkItemMigrationStates = _context.WorkItemMigrationStates.Where(w => (w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase1) || w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase2)) && w.FailureReason == FailureReason.None);
             var phase3WorkItemsToUpdateCount = successfullyMigratedWorkItemMigrationStates.Count();
             var totalNumberOfBatches = ClientHelpers.GetBatchCount(phase3WorkItemsToUpdateCount, Constants.BatchSize);
 
@@ -133,7 +134,7 @@ namespace Common.Migration
             {
                 IBatchMigrationContext batchContext = new BatchMigrationContext(batchId, workItemMigrationStateBatch);
                 IList<(int SourceId, WitBatchRequest WitBatchRequest)> sourceIdToWitBatchRequests = new List<(int SourceId, WitBatchRequest WitBatchRequest)>();
-                IList<WorkItem> sourceWorkItemsInBatch = await WorkItemTrackingHelper.GetWorkItemsAsync(_context.SourceClient.WorkItemTrackingHttpClient, workItemMigrationStateBatch.Select(a => a.SourceId).ToList(), expand: WorkItemExpand.All);
+                IList<WorkItem> sourceWorkItemsInBatch = await WorkItemApi.GetWorkItemsAsync(_context.SourceClient.WorkItemTrackingHttpClient, workItemMigrationStateBatch.Select(a => a.SourceId).ToList(), expand: WorkItemExpand.All);
 
                 foreach (WorkItem sourceWorkItem in sourceWorkItemsInBatch)
                 {
@@ -275,7 +276,7 @@ namespace Common.Migration
 
         private void LogFinalStatus()
         {
-            var createdWorkItems = this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Create);
+            var createdWorkItems = this._context.WorkItemMigrationStates.Where(w => w.MigrationAction == MigrationAction.Create);
             if (createdWorkItems.Any())
             {
                 Logger.LogSuccess(LogDestination.All, $"Created {createdWorkItems.Count()} work item(s)");
@@ -287,7 +288,7 @@ namespace Common.Migration
                 }
             }
 
-            var updatedWorkItems = this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1));
+            var updatedWorkItems = this._context.WorkItemMigrationStates.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1));
             if (updatedWorkItems.Any())
             {
                 Logger.LogSuccess(LogDestination.All, $"Updated {updatedWorkItems.Count()} work item(s)");
@@ -300,7 +301,7 @@ namespace Common.Migration
             }
 
             // To do: fix
-            Dictionary<int, FailureReason> notMigratedWorkItems = ClientHelpers.GetNotMigratedWorkItemsFromWorkItemsMigrationState(_context.WorkItemMigrationStates.Values);
+            Dictionary<int, FailureReason> notMigratedWorkItems = ClientHelpers.GetNotMigratedWorkItemsFromWorkItemsMigrationState(_context.WorkItemMigrationStates);
 
             if (notMigratedWorkItems.Any())
             {
@@ -339,7 +340,7 @@ namespace Common.Migration
         /// <returns></returns>
         public static async Task ReadSourceWorkItems(IMigrationContext migrationContext, IEnumerable<int> workItemIds, IBatchMigrationContext batchContext, WorkItemExpand? expand = WorkItemExpand.All)
         {
-            batchContext.SourceWorkItems = await WorkItemTrackingHelper.GetWorkItemsAsync(migrationContext.SourceClient.WorkItemTrackingHttpClient, workItemIds, expand: expand);
+            batchContext.SourceWorkItems = await WorkItemApi.GetWorkItemsAsync(migrationContext.SourceClient.WorkItemTrackingHttpClient, workItemIds, expand: expand);
         }
 
         public static int GetTargetId(int sourceId, IEnumerable<WorkItemMigrationState> workItemMigrationStates)

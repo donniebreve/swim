@@ -1,13 +1,15 @@
-﻿using System;
+﻿using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
+using System;
 
 namespace Common.Migration
 {
     public class WorkItemMigrationState
     {
         public int SourceId { get; set; }
-        public int? TargetId { get; set; }
-
         public Uri SourceUri { get; set; }
+        public int SourceRevision { get; set; }
+
+        public int? TargetId { get; set; }
         public Uri TargetUri { get; set; }
 
         public MigrationAction MigrationAction { get; set; }

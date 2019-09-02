@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Common.Migration;
 using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 
 namespace Common.Validation
 {
+    [RunOrder(2)]
     public class ValidateClassificationNodes : IWorkItemValidator
     {
         private static ILogger Logger { get; } = MigratorLogging.CreateLogger<ValidateClassificationNodes>();
@@ -86,7 +88,8 @@ namespace Common.Validation
             if ((context.Configuration.SkipWorkItemsWithMissingIterationPath && context.SkippedIterationPaths.Contains(iterationPath)) ||
                 (context.Configuration.SkipWorkItemsWithMissingAreaPath && context.SkippedAreaPaths.Contains(areaPath)))
             {
-                context.SkippedWorkItems.Add(workItem.Id.Value);
+                context.GetWorkItemMigrationState(workItem.Id.Value).MigrationAction = MigrationAction.None;
+                    //SkippedWorkItems.Add(workItem.Id.Value);
             }
         }
     }

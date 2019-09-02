@@ -55,7 +55,7 @@ namespace Common.Migration
             JsonPatchDocument jsonPatchDocument = CreateJsonPatchDocumentFromWorkItemFields(sourceWorkItem);
 
             // To do: Not sure how to clean this one up yet, needs more investigation
-            string hyperlink = this.migrationContext.WorkItemMigrationStates[sourceWorkItem.Id.Value].SourceUri.ToString(); //this.migrationContext.WorkItemIdsUris[sourceWorkItem.Id.Value];
+            string hyperlink = this.migrationContext.GetWorkItemMigrationState(sourceWorkItem.Id.Value).SourceUri.ToString(); //this.migrationContext.WorkItemIdsUris[sourceWorkItem.Id.Value];
             object attributeId = migrationContext.TargetIdToSourceHyperlinkAttributeId[targetId];
 
             JsonPatchOperation addHyperlinkWithCommentOperation = MigrationHelpers.GetHyperlinkAddOperation(

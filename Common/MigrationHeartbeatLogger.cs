@@ -46,34 +46,34 @@ namespace Common
 
         private int GetSucceededPhase1WorkItemsCount()
         {
-            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase1) && w.FailureReason == Migration.FailureReason.None).Count();
+            return this._context.WorkItemMigrationStates.Where(w => w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase1) && w.FailureReason == Migration.FailureReason.None).Count();
         }
 
         private int GetFailedPhase1WorkItemsCount()
         {
-            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase1) && w.FailureReason != Migration.FailureReason.None).Count();
+            return this._context.WorkItemMigrationStates.Where(w => w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase1) && w.FailureReason != Migration.FailureReason.None).Count();
         }
 
         private int GetSucceededPhase2WorkItemsCount()
         {
-            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase2) && w.FailureReason == Migration.FailureReason.None).Count();
+            return this._context.WorkItemMigrationStates.Where(w => w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase2) && w.FailureReason == Migration.FailureReason.None).Count();
         }
 
         private int GetFailedPhase2WorkItemsCount()
         {
-            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase2) && w.FailureReason != Migration.FailureReason.None).Count();
+            return this._context.WorkItemMigrationStates.Where(w => w.MigrationCompleted.HasFlag(WorkItemMigrationState.MigrationCompletionStatus.Phase2) && w.FailureReason != Migration.FailureReason.None).Count();
         }
 
         private int GetPhase1Total()
         {
-            int workItemsToCreateCount = this._context.WorkItemMigrationStates.Values.Where(a => a.MigrationAction == MigrationAction.Create).Count();
-            int workItemsToUpdate = this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1)).Count();
+            int workItemsToCreateCount = this._context.WorkItemMigrationStates.Where(a => a.MigrationAction == MigrationAction.Create).Count();
+            int workItemsToUpdate = this._context.WorkItemMigrationStates.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1)).Count();
             return workItemsToCreateCount + workItemsToUpdate;
         }
 
         private int GetPhase2Total()
         {
-            return this._context.WorkItemMigrationStates.Values.Where(a => a.MigrationAction == MigrationAction.Create || (a.MigrationAction == MigrationAction.Update && a.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase2))).Count();
+            return this._context.WorkItemMigrationStates.Where(a => a.MigrationAction == MigrationAction.Create || (a.MigrationAction == MigrationAction.Update && a.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase2))).Count();
         }
     }
 }

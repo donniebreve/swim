@@ -24,7 +24,7 @@ namespace Common.Migration
 
         public override IList<WorkItemMigrationState> GetWorkItemsAndStateToMigrate(IMigrationContext context)
         {
-            return context.WorkItemMigrationStates.Values.Where(wi => wi.MigrationAction == MigrationAction.Create).ToList();
+            return context.WorkItemMigrationStates.Where(wi => wi.MigrationAction == MigrationAction.Create).ToList();
         }
 
         public override int GetWorkItemsToProcessCount(IBatchMigrationContext batchContext)

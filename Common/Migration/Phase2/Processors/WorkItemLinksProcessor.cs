@@ -7,6 +7,7 @@ using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using Logging;
 using Microsoft.VisualStudio.Services.Common;
 using Common.Configuration;
+using Common.Api;
 
 namespace Common.Migration
 {
@@ -35,7 +36,8 @@ namespace Common.Migration
             await linkedWorkItemArtifactUrls.Batch(Constants.BatchSize).ForEachAsync(migrationContext.Configuration.Parallelism, async (workItemArtifactUris, batchId) =>
             {
                 Logger.LogTrace(LogDestination.File, $"Finding linked work items on target for batch {batchId}");
-                var results = await ClientHelpers.QueryArtifactUriToGetIdsFromUris(migrationContext.TargetClient.WorkItemTrackingHttpClient, workItemArtifactUris);
+
+                var results = await WorkItemApi.QueryWorkItemsForArtifactUrisAsync(migrationContext.TargetClient.WorkItemTrackingHttpClient, new ArtifactUriQuery { ArtifactUris = workItemArtifactUris });
                 foreach (var result in results.ArtifactUrisQueryResult)
                 {
                     if (result.Value != null)

@@ -8,6 +8,7 @@ using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 
 namespace Common.Validation
 {
+    [RunOrder(4)]
     public class ValidateWorkItemRelationTypes : IConfigurationValidator
     {
         private ILogger Logger { get; } = MigratorLogging.CreateLogger<ValidateWorkItemRelationTypes>();

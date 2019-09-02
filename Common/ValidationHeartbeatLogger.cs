@@ -39,7 +39,7 @@ namespace Common
             int workItemCount = GetCurrentWorkItemCount();
             if (workItemCount > 0)
             {
-                line6 = $"Total work items retrieved from query:        {workItemCount}";
+                line6 =    $"Total work items retrieved from query:     {workItemCount}";
             }
 
             string output = $"{line1}{Environment.NewLine}{line2}{Environment.NewLine}{line3}{Environment.NewLine}{line4}{Environment.NewLine}{line5}{Environment.NewLine}{line6}";
@@ -53,22 +53,22 @@ namespace Common
 
         private int GetNewWorkItemsFound()
         {
-            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Create).Count();
+            return this._context.WorkItemMigrationStates.Where(w => w.MigrationAction == MigrationAction.Create).Count();
         }
 
         private int GetExistingWorkItemsFound()
         {
-            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Update).Count();
+            return this._context.WorkItemMigrationStates.Where(w => w.MigrationAction == MigrationAction.Update).Count();
         }
 
         private int GetExistingWorkItemsValidatedForPhase1()
         {
-            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1)).Count();
+            return this._context.WorkItemMigrationStates.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase1)).Count();
         }
 
         private int GetExistingWorkItemsValidatedForPhase2()
         {
-            return this._context.WorkItemMigrationStates.Values.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase2)).Count();
+            return this._context.WorkItemMigrationStates.Where(w => w.MigrationAction == MigrationAction.Update && w.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase2)).Count();
         }
 
         private int GetCurrentWorkItemCount()

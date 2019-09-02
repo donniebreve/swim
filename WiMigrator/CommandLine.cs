@@ -124,12 +124,11 @@ namespace WiMigrator
                 //TODO: Create a common method to take the validator context and created a migration context
                 var context = new MigrationContext(configuration);
 
-                context.WorkItemMigrationStates = validatorContext.WorkItemMigrationStates;
+                context.WorkItemMigrationStateDictionary = validatorContext.WorkItemMigrationStateDictionary;
                 context.WorkItemTypes = validatorContext.TargetTypesAndFields;
                 context.IdentityFields = validatorContext.IdentityFields;
                 context.TargetAreaPaths = validatorContext.TargetAreaPaths;
                 context.TargetIterationPaths = validatorContext.TargetIterationPaths;
-                context.WorkItemMigrationStates = validatorContext.WorkItemMigrationStates;
                 context.TargetIdToSourceHyperlinkAttributeId = validatorContext.TargetIdToSourceHyperlinkAttributeId;
                 context.ValidatedWorkItemLinkRelationTypes = validatorContext.ValidatedWorkItemLinkRelationTypes;
                 context.RemoteLinkRelationTypes = validatorContext.RemoteLinkRelationTypes;

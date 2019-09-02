@@ -11,11 +11,11 @@ namespace Common.Configuration.Json
     /// </summary>
     public class Configuration : IConfiguration
     {
-        [JsonConverter(typeof(ConcreteConverter<Connection>))]
+        [JsonConverter(typeof(ConcreteTypeConverter<Connection>))]
         [JsonProperty(PropertyName = "source-connection", Required = Required.Always)]
         public IConnection SourceConnection { get; set; }
 
-        [JsonConverter(typeof(ConcreteConverter<Connection>))]
+        [JsonConverter(typeof(ConcreteTypeConverter<Connection>))]
         [JsonProperty(PropertyName = "target-connection", Required = Required.Always)]
         public IConnection TargetConnection { get; set; }
 
@@ -112,15 +112,15 @@ namespace Common.Configuration.Json
         [DefaultValue(LogLevel.Information)]
         public LogLevel LogLevelForFile { get; set; }
 
-        [JsonConverter(typeof(ConcreteConverter<FieldMapping>))]
+        [JsonConverter(typeof(ConcreteListConverter<IFieldMapping, FieldMapping>))]
         [JsonProperty(PropertyName = "field-mappings", DefaultValueHandling = DefaultValueHandling.Populate)]
-        public List<IFieldMapping> FieldMappings { get; set; }
+        public IList<IFieldMapping> FieldMappings { get; set; }
 
-        [JsonConverter(typeof(ConcreteConverter<FieldSubstitution>))]
+        [JsonConverter(typeof(ConcreteListConverter<IFieldSubstitution, FieldSubstitution>))]
         [JsonProperty(PropertyName = "field-substitutions", DefaultValueHandling = DefaultValueHandling.Populate)]
         public List<IFieldSubstitution> FieldSubstitutions { get; set; }
 
-        [JsonConverter(typeof(ConcreteConverter<FieldReplacement>))]
+        [JsonConverter(typeof(ConcreteListConverter<IFieldReplacement, FieldReplacement>))]
         [JsonProperty(PropertyName = "field-replacements", DefaultValueHandling = DefaultValueHandling.Populate)]
         public List<IFieldReplacement> FieldReplacements { get; set; }
 
@@ -128,7 +128,7 @@ namespace Common.Configuration.Json
         [DefaultValue(false)]
         public bool SendEmailNotification { get; set; }
 
-        [JsonConverter(typeof(ConcreteConverter<EmailSettings>))]
+        [JsonConverter(typeof(ConcreteTypeConverter<EmailSettings>))]
         [JsonProperty(PropertyName = "email-settings", Required = Required.DisallowNull)]
         public IEmailSettings EmailSettings { get; set; }
     }

@@ -7,6 +7,7 @@ using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Common.Migration;
 using Logging;
+using Common.Api;
 
 namespace Common.ApiWrappers
 {
@@ -103,7 +104,7 @@ namespace Common.ApiWrappers
         public async static Task<Exception> HandleBatchException(
             Guid requestId,
             Exception exception,
-            IMigrationContext migrationContext,
+            IMigrationContext context,
             IBatchMigrationContext batchContext,
             IEnumerable<int> sourceIds)
         {
@@ -116,14 +117,15 @@ namespace Common.ApiWrappers
             {
                 Logger.LogInformation(LogDestination.File, $"Checking if exception for {requestId} resulted in work items being migrated.");
 
-                // To do: replace this with scanning the WorkItemMigrationStates list
                 //var artifactUris = migrationContext.WorkItemIdsUris.Where(w => sourceIds.Contains(w.Key)).Select(w => w.Value);
-                var queryResult = await ClientHelpers.QueryArtifactUriToGetIdsFromUris(migrationContext.TargetClient.WorkItemTrackingHttpClient, null);// artifactUris);
+                var sourceUris = context.WorkItemMigrationStates.Where(item => sourceIds.Contains(item.SourceId)).Select(item => item.SourceUri.ToString());
+                var result = await WorkItemApi.QueryWorkItemsForArtifactUrisAsync(context.TargetClient.WorkItemTrackingHttpClient, new ArtifactUriQuery { ArtifactUris = sourceUris });
 
+                // To do
                 var anyWorkItemsCreated = false;
                 //foreach (var idToUri in migrationContext.WorkItemIdsUris.Where(w => sourceIds.Contains(w.Key)))
                 //{
-                //    if (ClientHelpers.GetMigratedWorkItemId(queryResult, idToUri, out int migratedId))
+                //    if (ClientHelpers.GetMigratedWorkItemId(result, idToUri, out int migratedId))
                 //    {
                 //        anyWorkItemsCreated = true;
                 //    }

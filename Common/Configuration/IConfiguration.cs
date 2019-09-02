@@ -94,7 +94,7 @@ namespace Common.Configuration
         LogLevel LogLevelForFile { get; set; }
 
         [DefaultValue(null)]
-        List<IFieldMapping> FieldMappings { get; set; }
+        IList<IFieldMapping> FieldMappings { get; set; }
 
         [DefaultValue(null)]
         List<IFieldSubstitution> FieldSubstitutions { get; set; }

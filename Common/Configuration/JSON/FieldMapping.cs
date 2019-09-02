@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Common.Serialization.Json;
+using Newtonsoft.Json;
 
 namespace Common.Configuration.Json
 {

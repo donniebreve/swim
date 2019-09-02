@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Threading.Tasks;
+using Common.Api;
+using Common.Extensions;
 using Common.Migration;
 using Logging;
 using Microsoft.Extensions.Logging;
@@ -36,43 +39,6 @@ namespace Common
             return RetryHelper.RetryAsync(async () =>
             {
                 return await client.GetWorkItemTypesAsync(project);
-            }, 5);
-        }
-
-        /// <summary>
-        /// Verify if the query exists in the database. Also a check used to validate connection
-        /// </summary>
-        /// <param name="client"></param>
-        /// <param name="project"></param>
-        /// <param name="queryName"></param>
-        /// <returns></returns>
-        public static Task<QueryHierarchyItem> GetQueryAsync(WorkItemTrackingHttpClient client, string project, string queryName)
-        {
-            Logger.LogInformation(LogDestination.File, $"Getting query for {client.BaseAddress.Host}");
-            return RetryHelper.RetryAsync(async () =>
-            {
-                return await client.GetQueryAsync(project, queryName, expand: QueryExpand.Wiql);
-            }, 5);
-        }
-
-        /// <summary>
-        /// Given an int array, get the list of workitems. Retries 5 times for connection timeouts etc.  
-        /// </summary>
-        /// <param name="client"></param>
-        /// <param name="ids"></param>
-        /// <returns></returns>
-        public async static Task<IList<WorkItem>> GetWorkItemsAsync(WorkItemTrackingHttpClient client, IEnumerable<int> ids, IEnumerable<string> fields = null, WorkItemExpand? expand = null)
-        {
-            Logger.LogDebug(LogDestination.File, $"Getting work items for {client.BaseAddress.Host}");
-
-            if (ids == null)
-            {
-                throw new ArgumentNullException(nameof(ids));
-            }
-
-            return await RetryHelper.RetryAsync(async () =>
-            {
-                return await client.GetWorkItemsAsync(ids, fields: fields, expand: expand);
             }, 5);
         }
 
@@ -189,63 +155,11 @@ namespace Common
             }, 5);
         }
 
-        /// <summary>
-        /// Gets all the work item ids for the query, with special handling for the case when the query results can exceed the result cap.
-        /// </summary>
-        public async static Task<ConcurrentDictionary<int, WorkItemMigrationState>> GetWorkItemIdsUrisAsync(WorkItemTrackingHttpClient client, string project, string queryName, string postMoveTag, int queryPageSize)
-        {
-            Logger.LogInformation(LogDestination.File, $"Getting work item ids for {client.BaseAddress.Host}");
 
-            var queryHierarchyItem = await GetQueryAsync(client, project, queryName);
-            var workItemMigrationStates = new ConcurrentDictionary<int, WorkItemMigrationState>();
 
-            var baseQuery = ParseQueryForPaging(queryHierarchyItem.Wiql, postMoveTag);
-            var watermark = 0;
-            string[] queryFields = new string[] { FieldNames.Watermark };
-            var lastID = 0;
-            var page = 0;
+        
 
-            while (true)
-            {
-                Logger.LogInformation(LogDestination.File, $"Querying work items for {client.BaseAddress.Host}, page {page++}, last id {lastID}");
 
-                var wiql = new Wiql
-                {
-                    Query = GetPageableQuery(baseQuery, watermark, lastID)
-                };
-                var queryResult = await RetryHelper.RetryAsync(async () =>
-                {
-                    return await client.QueryByWiqlAsync(wiql, project: project, top: queryPageSize);
-                }, 5);
-
-                Logger.LogTrace(LogDestination.File, $"The query returned {queryResult.WorkItems.Count()} results");
-
-                // Check if there were any results
-                if (!queryResult.WorkItems.Any()) break;
-
-                foreach (var workItemReference in queryResult.WorkItems)
-                {
-                    if (!workItemMigrationStates.ContainsKey(workItemReference.Id))
-                    {
-                        workItemMigrationStates[workItemReference.Id] = new WorkItemMigrationState()
-                        {
-                            SourceId = workItemReference.Id,
-                            SourceUri = new Uri(RemoveProjectGuidFromUrl(workItemReference.Url))
-                        };
-                    }
-                    lastID = workItemReference.Id;
-                }
-
-                // Get the last work item's watermark
-                var workItem = await RetryHelper.RetryAsync(async () =>
-                {
-                    return await client.GetWorkItemAsync(lastID, queryFields);
-                }, 5);
-
-                watermark = Convert.ToInt32(workItem.Fields[FieldNames.Watermark]);
-            }
-            return workItemMigrationStates;
-        }
 
         /// <summary>
         /// Strips the ORDER BY from the query so we can append our own order by clause
@@ -321,12 +235,178 @@ namespace Common
             }, 5);
         }
 
-        public async static Task<ArtifactUriQueryResult> GetIdsForUrisAsync(WorkItemTrackingHttpClient client, ArtifactUriQuery query)
+        /// <summary>
+        /// Gathers all the work item IDs and Uris from the query, with special handling for the case when the query results can exceed the result cap.
+        /// </summary>
+        public async static Task<ConcurrentDictionary<int, WorkItemMigrationState>> GetInitialWorkItemList(WorkItemTrackingHttpClient client, string project, string query, string postMoveTag, int queryPageSize)
         {
-            return await RetryHelper.RetryAsync(async () =>
-             {
-                 return await client.QueryWorkItemsForArtifactUrisAsync(query);
-             }, 5);
+            Logger.LogInformation(LogDestination.File, $"Getting work item ids for {client.BaseAddress.Host}");
+
+            string[] queryFields = new string[] { FieldNames.Watermark };
+            queryPageSize--; // Have to subtract 1 from the page size due to a bug in how query interprets page size
+            var watermark = 0;
+            var lastID = 0;
+            var page = 0;
+
+            var workItemMigrationStates = new ConcurrentDictionary<int, WorkItemMigrationState>();
+            var queryHierarchyItem = await WorkItemApi.GetQueryAsync(client, project, query);
+
+            var baseQuery = ParseQueryForPaging(queryHierarchyItem.Wiql, postMoveTag);
+            var wiql = new Wiql() { Query = queryHierarchyItem.Wiql };
+            if (postMoveTag != null) wiql = wiql.AddWhereConstraint($"System.Tags NOT CONTAINS '{postMoveTag}'");
+
+            while (true)
+            {
+                Logger.LogInformation(LogDestination.File, $"Querying work items for {client.BaseAddress.Host}, page {page++}, last id {lastID}");
+                var pagedWiql = wiql.AddWhereConstraint($"((System.Watermark > {watermark}) OR (System.Watermark = {watermark} AND System.Id > {lastID}))").SetOrderBy("System.Watermark, System.Id");
+                var result = await WorkItemApi.QueryByWiqlAsync(client, pagedWiql, project, queryPageSize);
+                Logger.LogTrace(LogDestination.File, $"The query returned {result.WorkItems.Count()} results");
+
+                // Check if there were any results
+                if (!result.WorkItems.Any()) break;
+
+                foreach (var workItemReference in result.WorkItems)
+                {
+                    if (!workItemMigrationStates.ContainsKey(workItemReference.Id))
+                    {
+                        workItemMigrationStates[workItemReference.Id] = new WorkItemMigrationState()
+                        {
+                            SourceId = workItemReference.Id,
+                            SourceUri = new Uri(RemoveProjectGuidFromUrl(workItemReference.Url)),
+                            MigrationAction = MigrationAction.Create
+                        };
+                    }
+                    lastID = workItemReference.Id;
+                }
+
+                // Get the last work item's watermark
+                var workItem = await WorkItemApi.GetWorkItemAsync(client, lastID, queryFields);
+
+                watermark = Convert.ToInt32(workItem.Fields[FieldNames.Watermark]);
+            }
+            return workItemMigrationStates;
+        }
+
+        public async static Task GetSourceWorkItemData(IContext context, ISet<string> fields)
+        {
+            // Skip work items that will not be migrated
+            var workItems = context.WorkItemMigrationStates.Where(item => item.MigrationAction != MigrationAction.None);
+            if (!workItems.Any()) return;
+
+            // Gather work item fields
+            var stopwatch = Stopwatch.StartNew();
+            Logger.LogInformation(LogDestination.File, "Querying source to retrieve work item fields");
+            var numberOfBatches = ClientHelpers.GetBatchCount(workItems.Count(), Constants.BatchSize);
+            await workItems.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemMigrationStates, batchId) =>
+            {
+                var results = await WorkItemApi.GetWorkItemsAsync(context.SourceClient.WorkItemTrackingHttpClient, workItemMigrationStates.Select(item => item.SourceId));
+                foreach (var result in results)
+                {
+                    var workItemMigrationState = context.GetWorkItemMigrationState(result.Id.Value);
+                    foreach (var field in fields)
+                    {
+                        workItemMigrationState.GetType().GetProperty(field).SetValue(
+                            workItemMigrationState, result.GetType().GetProperty(field).GetValue(result), null);
+                    }
+                }
+            });
+        }
+
+        /// <summary>
+        /// Looks at all the work items in context.WorkItemMigrationStates and identifies work items that already exist in the target.
+        /// </summary>
+        /// <param name="context">The current context.</param>
+        /// <returns>An awaitable Task.</returns>
+        public async static Task IdentifyMigratedWorkItems(IContext context)
+        {
+            // Skip work items that will not be migrated
+            var workItems = context.WorkItemMigrationStates.Where(item => item.MigrationAction != MigrationAction.None);
+            if (workItems.Any())
+            {
+                var stopwatch = Stopwatch.StartNew();
+                Logger.LogInformation(LogDestination.File, "Querying target to find previously migrated work items");
+                var numberOfBatches = ClientHelpers.GetBatchCount(workItems.Count(), Constants.BatchSize);
+                await workItems.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemMigrationStates, batchId) =>
+                {
+                    Logger.LogInformation(LogDestination.File, $"Batch {batchId} of {numberOfBatches}: Started");
+                    var batchStopwatch = Stopwatch.StartNew();
+
+                    // Get target work items which contain the source uris in their links section
+                    var sourceUris = workItemMigrationStates.Select(item => item.SourceUri.ToString());
+                    var results = await WorkItemApi.QueryWorkItemsForArtifactUrisAsync(context.TargetClient.WorkItemTrackingHttpClient, new ArtifactUriQuery { ArtifactUris = sourceUris });
+
+                    // See if source work items exist in the target and update the migration action
+                    foreach (var workItem in workItemMigrationStates)
+                    {
+                        try
+                        {
+                            var workItemReferences = results.ArtifactUrisQueryResult[workItem.SourceUri.ToString()];
+                            if (workItemReferences.Count() > 1)
+                            {
+                                throw new Exception($"Found more than one work item with artifact link {workItem.SourceUri} in the target.");
+                            }
+                            if (workItemReferences.Count() == 1)
+                            {
+
+
+
+
+
+
+
+
+
+
+                                // To do
+                                ////get the source rev from the revision dictionary - populated by PostValidateWorkitems
+                                //int sourceId = workItemMigrationState.SourceId;
+                                //int sourceRev = ValidationContext.SourceWorkItemRevision[sourceId];
+                                //string sourceUrl = ValidationContext.WorkItemIdsUris[sourceId];
+                                //int targetRev = GetRev(this.ValidationContext, targetWorkItem, sourceId, hyperlinkToSourceRelation);
+
+                                //if (IsDifferenceInRevNumbers(sourceId, targetWorkItem, hyperlinkToSourceRelation, targetRev))
+                                //{
+                                //    Logger.LogInformation(LogDestination.File, $"Source workItem {sourceId} Rev {sourceRev} Target workitem {targetWorkItem.Id} Rev {targetRev}");
+                                //    this.sourceWorkItemIdsThatHaveBeenUpdated.Add(sourceId);
+                                //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase1;
+                                //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
+                                //}
+                                //else if (IsPhase2UpdateRequired(workItemMigrationState, targetWorkItem))
+                                //{
+                                //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
+                                //}
+                                //else
+                                //{
+                                //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.None;
+                                //}
+
+
+
+
+
+
+
+
+                                workItem.MigrationAction = MigrationAction.Update;
+                                workItem.TargetId = workItemReferences.First().Id;
+                                workItem.TargetUri = new Uri(workItemReferences.First().Url);
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            workItem.MigrationAction = MigrationAction.None;
+                            workItem.FailureReason |= FailureReason.DuplicateSourceLinksOnTarget;
+                            Logger.LogError(LogDestination.File, e, e.Message);
+                        }
+                    }
+
+                    batchStopwatch.Stop();
+                    Logger.LogInformation(LogDestination.File, $"Batch {batchId} of {numberOfBatches} completed in {batchStopwatch.Elapsed.TotalSeconds}s");
+                });
+
+                stopwatch.Stop();
+                Logger.LogInformation(LogDestination.File, $"Completed querying target to find previously migrated work items in {stopwatch.Elapsed.TotalSeconds}s");
+            }
         }
     }
 }

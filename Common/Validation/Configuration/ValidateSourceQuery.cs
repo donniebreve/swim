@@ -1,9 +1,9 @@
-﻿using System;
-using System.Collections.Concurrent;
-using System.Threading.Tasks;
+﻿using Common.Api;
 using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
+using System;
+using System.Threading.Tasks;
 
 namespace Common.Validation
 {
@@ -20,7 +20,7 @@ namespace Common.Validation
             QueryHierarchyItem query;
             try
             {
-                query = await WorkItemTrackingHelper.GetQueryAsync(context.SourceClient.WorkItemTrackingHttpClient, context.Configuration.SourceConnection.Project, context.Configuration.Query);
+                query = await WorkItemApi.GetQueryAsync(context.SourceClient.WorkItemTrackingHttpClient, context.Configuration.SourceConnection.Project, context.Configuration.Query);
             }
             catch (Exception e)
             {

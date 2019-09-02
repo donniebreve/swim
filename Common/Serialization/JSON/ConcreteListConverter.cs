@@ -1,13 +1,15 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 
 namespace Common.Serialization.Json
 {
     /// <summary>
-    /// Converter that forces conversion to a concrete type.
+    /// Converter that forces conversion to an implemented type for a list.
     /// </summary>
-    /// <typeparam name="T">The desired type.</typeparam>
-    public class ConcreteConverter<T> : JsonConverter
+    /// <typeparam name="TInterface">The desired return type.</typeparam>
+    /// <typeparam name="TImplementation">The desired deserialization type.</typeparam>
+    public class ConcreteListConverter<TInterface, TImplementation> : JsonConverter where TImplementation : TInterface
     {
         /// <summary>
         /// If this converter can convert the object.
@@ -20,13 +22,14 @@ namespace Common.Serialization.Json
         /// Deserializes the JSON string.
         /// </summary>
         /// <param name="reader">The JsonReader.</param>
-        /// <param name="objectType">The object type.</param>
+        /// <param name="type">The object type.</param>
         /// <param name="existingValue">The existing value.</param>
         /// <param name="serializer">The JsonSerializer.</param>
         /// <returns>The deserialized object.</returns>
         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, Newtonsoft.Json.JsonSerializer serializer)
         {
-            return serializer.Deserialize<T>(reader);
+            var list = serializer.Deserialize<List<TImplementation>>(reader);
+            return list.ConvertAll(x => (TInterface)x);
         }
 
         /// <summary>

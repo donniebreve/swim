@@ -7,16 +7,19 @@ using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Common.Configuration;
 using Logging;
+using Common.Migration;
 
 namespace Common.Validation
 {
-    [RunOrder(5)]
+    [RunOrder(3)]
     public class ValidateWorkItemTypes : IWorkItemValidator
     {
         private ILogger Logger { get; } = MigratorLogging.CreateLogger<ValidateWorkItemTypes>();
 
         public string Name => "Work item types";
 
+
+        // To do: batch up all the work items, and retrieve all their types. get a distinct list of the types, and verify those against the target.
         public async Task Prepare(IValidationContext context)
         {
             Logger.LogInformation("Reading the work item types from the source and target accounts");
@@ -48,7 +51,7 @@ namespace Common.Validation
             }
 
             // handle condition of activated/not activated:
-            ValidateFieldsMapping(context);
+            ValidateFieldMappings(context);
 
             try
             {
@@ -83,45 +86,28 @@ namespace Common.Validation
             }
         }
 
-        public void ValidateFieldsMapping(IValidationContext context)
+        public void ValidateFieldMappings(IValidationContext context)
         {
-            if (context.Configuration.FieldReplacements == null)
+            if (context.Configuration.FieldMappings == null)
             {
                 return;
             }
-
-            foreach (var sourceToTargetFields in context.Configuration.FieldReplacements)
+            foreach (var mapping in context.Configuration.FieldMappings)
             {
-                // To do
-                //string sourceField = sourceToTargetFields.Key;
-                //TargetFieldMap targetFieldMap = sourceToTargetFields.Value;
-
-                //if (context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject.Contains(sourceField, StringComparer.OrdinalIgnoreCase) || context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject.Contains(targetFieldMap.FieldReferenceName, StringComparer.OrdinalIgnoreCase))
-                //{
-                //    string unsupportedFields = string.Join(", ", context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject);
-                //    throw new ValidationException($"Source fields or field-reference-name cannot be set to any of: {unsupportedFields} in the configuration file.");
-                //}
-
-                //if (!context.SourceFields.ContainsKeyIgnoringCase(sourceField))
-                //{
-                //    throw new ValidationException($"Source fields do not contain {sourceField} that is specified in the configuration file.");
-                //}
-
-                //if (targetFieldMap.Value != null && targetFieldMap.FieldReferenceName != null)
-                //{
-                //    throw new ValidationException($"Under fields in config, for source field: {sourceField}, you must specify value or field-reference-name, but not both.");
-                //}
-                //else if (targetFieldMap.Value == null && string.IsNullOrEmpty(targetFieldMap.FieldReferenceName))
-                //{
-                //    throw new ValidationException($"Under fields in config, for source field: {sourceField}, you must specify value or field-reference-name.");
-                //}
-                //else if (!string.IsNullOrEmpty(targetFieldMap.FieldReferenceName))
-                //{
-                //    if (!context.TargetFields.ContainsKeyIgnoringCase(targetFieldMap.FieldReferenceName))
-                //    {
-                //        throw new ValidationException($"Target does not contain the field-reference-name you provided: {targetFieldMap.FieldReferenceName}.");
-                //    }
-                //}
+                if (!context.SourceFields.ContainsKeyIgnoringCase(mapping.SourceField))
+                {
+                    throw new ValidationException($"Source fields do not contain {mapping.SourceField} that is specified in the configuration file.");
+                }
+                if (!context.TargetFields.ContainsKeyIgnoringCase(mapping.TargetField))
+                {
+                    throw new ValidationException($"Target does not contain the field-reference-name you provided: {mapping.TargetField}.");
+                }
+                if (context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject.Contains(mapping.SourceField, StringComparer.OrdinalIgnoreCase)
+                    || context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject.Contains(mapping.TargetField, StringComparer.OrdinalIgnoreCase))
+                {
+                    string unsupportedFields = string.Join(", ", context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject);
+                    throw new ValidationException($"Source fields or field-reference-name cannot be set to any of: {unsupportedFields} in the configuration file.");
+                }
             }
         }
 
@@ -146,7 +132,8 @@ namespace Common.Validation
             // Nothing we can do with a work item type that doesn't exist, add it to the skipped list.
             if (context.SkippedTypes.Contains(type))
             {
-                context.SkippedWorkItems.Add(workItem.Id.Value);
+                context.GetWorkItemMigrationState(workItem.Id.Value).MigrationAction = MigrationAction.None;
+                    //SkippedWorkItems.Add(workItem.Id.Value);
             }
         }
 
@@ -210,46 +197,49 @@ namespace Common.Validation
             {
                 return false;
             }
-            var matches = true;
+            bool workItemValid = true;
             foreach (var field in sourceFields)
             {
+                bool fieldValid = true;
                 if (!context.ValidatedFields.Contains(field) && !context.SkippedFields.Contains(field))
                 {
-                    if (!targetFields.Contains(field))
+                    // Get the mapped field
+                    var targetFieldName = field;
+                    if (context.Configuration.FieldMappings != null)
                     {
-                        matches = false;
-                        context.SkippedFields.Add(field);
-                        Logger.LogWarning(LogDestination.File, $"Target: Field {field} does not exist in {workItemType}");
+                        foreach (var mapping in context.Configuration.FieldMappings)
+                        {
+                            if (mapping.SourceField == field) targetFieldName = mapping.TargetField;
+                        }
+                    }
+                    // Check that the target field exists
+                    if (!targetFields.Contains(targetFieldName))
+                    {
+                        workItemValid = fieldValid = false;
+                        Logger.LogWarning(LogDestination.File, $"Target field {targetFieldName} does not exist in Target type {workItemType}");
                     }
                     else
                     {
-                        matches &= CompareField(context, context.SourceFields[field], context.TargetFields[field]);
+                        // Compare the field type
+                        var sourceField = context.SourceFields[field];
+                        var targetField = context.TargetFields[targetFieldName];
+                        if (sourceField.Type != targetField.Type)
+                        {
+                            workItemValid = fieldValid = false;
+                            Logger.LogWarning(LogDestination.File, $"Source field {sourceField.ReferenceName} ({sourceField.Type}) is not of the same type as target field {targetField.ReferenceName} ({targetField.Type})");
+                        }
+                    }
+                    if (fieldValid)
+                    {
+                        context.ValidatedFields.Add(field);
+                    }
+                    else
+                    {
+                        context.SkippedFields.Add(field);
                     }
                 }
             }
-
-            return matches;
-        }
-
-        private bool CompareField(IValidationContext context, WorkItemField source, WorkItemField target)
-        {
-            var matches = true;
-            if (source.Type != target.Type)
-            {
-                matches = false;
-                Logger.LogWarning(LogDestination.File, $"Target: Field {source.ReferenceName} of type {source.Type} is not of the same type {target.Type}");
-            }
-
-            if (matches)
-            {
-                context.ValidatedFields.Add(source.ReferenceName);
-            }
-            else
-            {
-                context.SkippedFields.Add(source.ReferenceName);
-            }
-
-            return matches;
+            return workItemValid;
         }
     }
 }
