@@ -1,17 +1,17 @@
 ﻿namespace Common.Configuration
 {
     /// <summary>
-    /// Maps a source field to a different target field.
+    /// Maps a source identity to a target identity.
     /// </summary>
-    public interface IFieldMapping
+    public interface IIdentityMapping
     {
         /// <summary>
-        /// The source field name.
+        /// The source identity.
         /// </summary>
         string Source { get; set; }
 
         /// <summary>
-        /// The target field name.
+        /// The target identity.
         /// </summary>
         string Target { get; set; }
     }

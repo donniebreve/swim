@@ -28,7 +28,7 @@ namespace Common.Configuration
         bool UpdateModifiedWorkItems { get; set; }
 
         [DefaultValue(false)]
-        bool OverwriteWorkItems { get; set; }
+        bool OverwriteExistingWorkItems { get; set; }
 
         [DefaultValue(null)]
         int Parallelism { get; set; }
@@ -48,20 +48,31 @@ namespace Common.Configuration
         [DefaultValue(null)]
         int AttachmentUploadChunkSize { get; set; }
 
+
         [DefaultValue(false)]
-        bool MoveHistory { get; set; }
+        bool MigrateIdentities { get; set; }
+
+        [DefaultValue(false)]
+        bool RemoveEmojisFromIdentityDisplayNames { get; set; }
+
+        [DefaultValue(false)]
+        bool MigrateComments { get; set; }
+
+        [DefaultValue(false)]
+        bool MigrateHistory { get; set; }
 
         [DefaultValue(200)]
-        int MoveHistoryLimit { get; set; }
+        int HistoryLimit { get; set; }
 
         [DefaultValue(false)]
-        bool MoveGitLinks { get; set; }
+        bool MigrateGitLinks { get; set; }
 
         [DefaultValue(false)]
-        bool MoveAttachments { get; set; }
+        bool MigrateAttachments { get; set; }
 
         [DefaultValue(false)]
-        bool MoveLinks { get; set; }
+        bool MigrateLinks { get; set; }
+        
 
         [DefaultValue(null)]
         string SourcePostMoveTag { get; set; }
@@ -84,14 +95,11 @@ namespace Common.Configuration
         [DefaultValue(null)]
         string DefaultIterationPath { get; set; }
 
-        [DefaultValue(false)]
-        bool ClearIdentityDisplayNames { get; set; }
-
-        [DefaultValue(false)]
-        bool EnsureIdentities { get; set; }
-
         [DefaultValue(LogLevel.Information)]
         LogLevel LogLevelForFile { get; set; }
+
+        [DefaultValue(null)]
+        IList<IIdentityMapping> IdentityMappings { get; set; }
 
         [DefaultValue(null)]
         IList<IFieldMapping> FieldMappings { get; set; }

@@ -58,21 +58,18 @@ namespace Common.Migration
         {
             Logger.LogInformation("Starting migration phase 2");
 
-            IEnumerable<WorkItemMigrationState> successfulWorkItemMigrationStates = null;
+            IList<WorkItemMigrationState> workItems = new List<WorkItemMigrationState>();
+            if (_context.Configuration.CreateNewWorkItems)
+            {
+                workItems.AddRange(_context.WorkItemMigrationStates.Where(item => item.MigrationAction == MigrationAction.Create));
+            }
+            if (_context.Configuration.UpdateModifiedWorkItems || _context.Configuration.OverwriteExistingWorkItems)
+            {
+                // To do: figure out why he wanted to only update items with the RequirementForExisting.UpdatePhase2
+                workItems.AddRange(_context.WorkItemMigrationStates.Where(item => item.MigrationAction == MigrationAction.Update));
+            }
 
-            // To do
-            //// when skip existing config flag is on and this work item was existing, continue to next work item.
-            //if (context.Configuration.SkipExisting)
-            //{
-            //    successfulWorkItemMigrationStates = context.WorkItemsMigrationState.Where(a => a.MigrationState == WorkItemMigrationState.State.Create);
-            //}
-            //else
-            //{
-            //    // allow any Create, OR Existing with UpdatePhase2
-            //    successfulWorkItemMigrationStates = context.WorkItemsMigrationState.Where(a => a.MigrationState == WorkItemMigrationState.State.Create || (a.MigrationState == WorkItemMigrationState.State.Existing && a.Requirement.HasFlag(WorkItemMigrationState.RequirementForExisting.UpdatePhase2)));
-            //}
-
-            var phase2WorkItemsToUpdateCount = successfulWorkItemMigrationStates.Count();
+            var phase2WorkItemsToUpdateCount = workItems.Count();
             var totalNumberOfBatches = ClientHelpers.GetBatchCount(phase2WorkItemsToUpdateCount, Constants.BatchSize);
 
             if (phase2WorkItemsToUpdateCount == 0)
@@ -81,7 +78,7 @@ namespace Common.Migration
                 return;
             }
 
-            await successfulWorkItemMigrationStates.Batch(Constants.BatchSize).ForEachAsync(_context.Configuration.Parallelism, async (workItemMigrationStateBatch, batchId) =>
+            await workItems.Batch(Constants.BatchSize).ForEachAsync(_context.Configuration.Parallelism, async (workItemMigrationStateBatch, batchId) =>
             {
                 Logger.LogTrace(LogDestination.File, $"Reading Phase 2 source and target work items for batch {batchId} of {totalNumberOfBatches}");
                 // make web call to get source and target work items

@@ -18,7 +18,7 @@ namespace Common.Migration
 
         public bool IsEnabled(IConfiguration configuration)
         {
-            return configuration.MoveLinks;
+            return configuration.MigrateLinks;
         }
 
         public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)

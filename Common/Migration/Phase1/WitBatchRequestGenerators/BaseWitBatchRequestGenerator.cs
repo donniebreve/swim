@@ -99,14 +99,27 @@ namespace Common.Migration
                 {
                     KeyValuePair<string, object> fieldProcessedForConfigFields = GetTargetField(sourceField, fieldNamesAlreadyPopulated);
                     KeyValuePair<string, object> preparedField = UpdateProjectNameIfNeededForField(sourceWorkItem, fieldProcessedForConfigFields);
-                    
-                    // TEMPORARY HACK for handling emoticons in identity fields:
-                    if (this.migrationContext.Configuration.ClearIdentityDisplayNames)
+
+                    // If this is an identity field
+                    if (this.migrationContext.IdentityFields.Contains(sourceField.Key))
                     {
-                        preparedField = RemoveEmojis(sourceField, preparedField);
+                        // Apply identity mapping
+                        if (this.migrationContext.Configuration.IdentityMappings != null)
+                        {
+                            var identityMapping = this.migrationContext.Configuration.IdentityMappings.SingleOrDefault(m => m.Source == preparedField.Value.ToString());
+                            if (identityMapping != null)
+                            {
+                                preparedField = new KeyValuePair<string, object>(preparedField.Key, identityMapping.Target);
+                            }
+                        }
+                        // Remove emojis from identities, referred to as a temoprary hack in the original source
+                        if (this.migrationContext.Configuration.RemoveEmojisFromIdentityDisplayNames)
+                        {
+                            preparedField = new KeyValuePair<string, object>(preparedField.Key, preparedField.Value.ToString().RemoveEmojis());
+                        }
                     }
 
-                    // add inline image urls
+                    // Add inline image urls
                     JsonPatchOperation jsonPatchOperation;
                     if (this.migrationContext.HtmlFieldReferenceNames.Contains(preparedField.Key) 
                         && preparedField.Value is string)
@@ -128,59 +141,40 @@ namespace Common.Migration
 
         private KeyValuePair<string, object> GetTargetField(KeyValuePair<string, object> sourceField, IList<string> fieldNamesAlreadyPopulated)
         {
-            KeyValuePair<string, object> newField = sourceField;
-
             string sourceFieldName = sourceField.Key;
             object sourceFieldValue = sourceField.Value;
+            string targetFieldName = sourceFieldName;
+            object targetFieldValue = sourceFieldValue;
 
-            if (this.migrationContext.Configuration.FieldReplacements != null)
+            if (this.migrationContext.Configuration.FieldMappings != null)
             {
-                // To do
-                //if (this.migrationContext.Configuration.FieldReplacements.ContainsKeyIgnoringCase(sourceFieldName))
-                //{
-                //    TargetFieldMap targetFieldMap = this.migrationContext.Configuration.FieldReplacements[sourceFieldName];
-                //    if (targetFieldMap.Value != null)
-                //    {
-                //        newField = new KeyValuePair<string, object>(sourceFieldName, targetFieldMap.Value); // set targetField to value
-                //    }
-                //    else if (!string.IsNullOrEmpty(targetFieldMap.FieldReferenceName))
-                //    {
-                //        newField = new KeyValuePair<string, object>(targetFieldMap.FieldReferenceName, sourceFieldValue); // bring source value to specified target field
-                //        fieldNamesAlreadyPopulated.Add(targetFieldMap.FieldReferenceName);
-                //    }
-                //}
-            }
-
-            return newField;
-        }
-
-        // TEMPORARY HACK for handling emoticons in identity fields:
-        protected KeyValuePair<string, object> RemoveEmojis(KeyValuePair<string, object> sourceField, KeyValuePair<string, object> targetField)
-        {
-            if (targetField.Value is string
-                && this.migrationContext.IdentityFields.Contains(sourceField.Key))
-            {
-                string targetFieldValueString = targetField.Value as string;
-
-                if (!string.IsNullOrEmpty(targetFieldValueString))
+                var fieldMapping = this.migrationContext.Configuration.FieldMappings.SingleOrDefault(m => m.Source == sourceFieldName);
+                if (fieldMapping != null)
                 {
-                    string fixedTargetFieldValue;
-                    if (targetFieldValueString.Contains('<'))
-                    {
-                        int index = targetFieldValueString.IndexOf('<');
-                        fixedTargetFieldValue = targetFieldValueString.Substring(index);
-                    }
-                    else
-                    {
-                        fixedTargetFieldValue = Regex.Replace(targetFieldValueString, @"[\p{C}\p{S}]*", "");
-                    }
-
-                    KeyValuePair<string, object> targetFieldNoSanta = new KeyValuePair<string, object>(targetField.Key, fixedTargetFieldValue);
-                    targetField = targetFieldNoSanta;
+                    targetFieldName = fieldMapping.Target;
+                    fieldNamesAlreadyPopulated.Add(targetFieldName);
                 }
             }
 
-            return targetField;
+            if (this.migrationContext.Configuration.FieldSubstitutions != null)
+            {
+                var fieldSubstitution = this.migrationContext.Configuration.FieldSubstitutions.SingleOrDefault(s => s.Field == sourceFieldName);
+                if (fieldSubstitution != null)
+                {
+                    targetFieldValue = fieldSubstitution.Value;
+                }
+            }
+
+            if (this.migrationContext.Configuration.FieldReplacements != null)
+            {
+                var fieldReplacement = this.migrationContext.Configuration.FieldReplacements.SingleOrDefault(r => r.Field == sourceFieldName);
+                if (fieldReplacement != null)
+                {
+                    targetFieldValue = Regex.Replace(targetFieldValue.ToString(), fieldReplacement.Pattern, fieldReplacement.Replacement);
+                }
+            }
+
+            return new KeyValuePair<string, object>(targetFieldName, targetFieldValue);
         }
 
         /// <summary>
@@ -206,8 +200,8 @@ namespace Common.Migration
 
         private string BuildTargetInlineImageUrl(string sourceInlineImageUrl, string targetInlineImageGuid)
         {
-            string sourceAccount = this.migrationContext.Configuration.SourceConnection.Account;
-            string targetAccount = this.migrationContext.Configuration.TargetConnection.Account;
+            string sourceAccount = this.migrationContext.Configuration.SourceConnection.Uri;
+            string targetAccount = this.migrationContext.Configuration.TargetConnection.Uri;
             string result = sourceInlineImageUrl.Replace(sourceAccount, targetAccount);
             return MigrationHelpers.ReplaceAttachmentUrlGuid(result, targetInlineImageGuid);
         }

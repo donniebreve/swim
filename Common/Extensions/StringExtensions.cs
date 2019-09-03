@@ -1,14 +1,38 @@
 ﻿using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using Microsoft.VisualStudio.Services.Common;
 
 namespace Common
 {
     public static class StringExtensions
     {
+        /// <summary>
+        /// Emoji regex.
+        /// </summary>
+        /// <remarks>
+        /// https://github.com/franklsf95/ruby-emoji-regex
+        /// </remarks>
+        private static readonly Regex EmojiRegex = new Regex(@"[\u00A9\u00AE\u203C\u2049\u2122\u2139\u2194-\u2199\u21A9-\u21AA\u231A-\u231B\u2328\u23CF\u23E9-\u23F3\u23F8-\u23FA\u24C2\u25AA-\u25AB\u25B6\u25C0\u25FB-\u25FE\u2600-\u2604\u260E\u2611\u2614-\u2615\u2618\u261D\u2620\u2622-\u2623\u2626\u262A\u262E-\u262F\u2638-\u263A\u2640\u2642\u2648-\u2653\u2660\u2663\u2665-\u2666\u2668\u267B\u267F\u2692-\u2697\u2699\u269B-\u269C\u26A0-\u26A1\u26AA-\u26AB\u26B0-\u26B1\u26BD-\u26BE\u26C4-\u26C5\u26C8\u26CE-\u26CF\u26D1\u26D3-\u26D4\u26E9-\u26EA\u26F0-\u26F5\u26F7-\u26FA\u26FD\u2702\u2705\u2708-\u270D\u270F\u2712\u2714\u2716\u271D\u2721\u2728\u2733-\u2734\u2744\u2747\u274C\u274E\u2753-\u2755\u2757\u2763-\u2764\u2795-\u2797\u27A1\u27B0\u27BF\u2934-\u2935\u2B05-\u2B07\u2B1B-\u2B1C\u2B50\u2B55\u3030\u303D\u3297\u3299\u1F004\u1F0CF\u1F170-\u1F171\u1F17E-\u1F17F\u1F18E\u1F191-\u1F19A\u1F1E6-\u1F1FF\u1F201-\u1F202\u1F21A\u1F22F\u1F232-\u1F23A\u1F250-\u1F251\u1F300-\u1F321\u1F324-\u1F393\u1F396-\u1F397\u1F399-\u1F39B\u1F39E-\u1F3F0\u1F3F3-\u1F3F5\u1F3F7-\u1F4FD\u1F4FF-\u1F53D\u1F549-\u1F54E\u1F550-\u1F567\u1F56F-\u1F570\u1F573-\u1F57A\u1F587\u1F58A-\u1F58D\u1F590\u1F595-\u1F596\u1F5A4-\u1F5A5\u1F5A8\u1F5B1-\u1F5B2\u1F5BC\u1F5C2-\u1F5C4\u1F5D1-\u1F5D3\u1F5DC-\u1F5DE\u1F5E1\u1F5E3\u1F5E8\u1F5EF\u1F5F3\u1F5FA-\u1F64F\u1F680-\u1F6C5\u1F6CB-\u1F6D2\u1F6E0-\u1F6E5\u1F6E9\u1F6EB-\u1F6EC\u1F6F0\u1F6F3-\u1F6F8\u1F910-\u1F93A\u1F93C-\u1F93E\u1F940-\u1F945\u1F947-\u1F94C\u1F950-\u1F96B\u1F980-\u1F997\u1F9C0\u1F9D0-\u1F9E6\u200D\u20E3\uFE0F\uE0020-\uE007F\u2388\u2605\u2607-\u260D\u260F-\u2610\u2612\u2616-\u2617\u2619-\u261C\u261E-\u261F\u2621\u2624-\u2625\u2627-\u2629\u262B-\u262D\u2630-\u2637\u263B-\u263F\u2641\u2643-\u2647\u2654-\u265F\u2661-\u2662\u2664\u2667\u2669-\u267A\u267C-\u267E\u2680-\u2691\u2698\u269A\u269D-\u269F\u26A2-\u26A9\u26AC-\u26AF\u26B2-\u26BC\u26BF-\u26C3\u26C6-\u26C7\u26C9-\u26CD\u26D0\u26D2\u26D5-\u26E8\u26EB-\u26EF\u26F6\u26FB-\u26FC\u26FE-\u2701\u2703-\u2704\u270E\u2710-\u2711\u2765-\u2767\u1F000-\u1F003\u1F005-\u1F0CE\u1F0D0-\u1F0FF\u1F10D-\u1F10F\u1F12F\u1F16C-\u1F16F\u1F1AD-\u1F1E5\u1F203-\u1F20F\u1F23C-\u1F23F\u1F249-\u1F24F\u1F252-\u1F2FF\u1F322-\u1F323\u1F394-\u1F395\u1F398\u1F39C-\u1F39D\u1F3F1-\u1F3F2\u1F3F6\u1F4FE\u1F53E-\u1F548\u1F54F\u1F568-\u1F56E\u1F571-\u1F572\u1F57B-\u1F586\u1F588-\u1F589\u1F58E-\u1F58F\u1F591-\u1F594\u1F597-\u1F5A3\u1F5A6-\u1F5A7\u1F5A9-\u1F5B0\u1F5B3-\u1F5BB\u1F5BD-\u1F5C1\u1F5C5-\u1F5D0\u1F5D4-\u1F5DB\u1F5DF-\u1F5E0\u1F5E2\u1F5E4-\u1F5E7\u1F5E9-\u1F5EE\u1F5F0-\u1F5F2\u1F5F4-\u1F5F9\u1F6C6-\u1F6CA\u1F6D3-\u1F6DF\u1F6E6-\u1F6E8\u1F6EA\u1F6ED-\u1F6EF\u1F6F1-\u1F6F2\u1F6F9-\u1F6FF\u1F774-\u1F77F\u1F7D5-\u1F7FF\u1F80C-\u1F80F\u1F848-\u1F84F\u1F85A-\u1F85F\u1F888-\u1F88F\u1F8AE-\u1F90F\u1F93F\u1F94D-\u1F94F\u1F96C-\u1F97F\u1F998-\u1F9BF\u1F9C1-\u1F9CF]");
+
+        /// <summary>
+        /// Splits a string with semi-colons into a hash set.
+        /// </summary>
+        /// <param name="input">This string.</param>
+        /// <returns>A HashSet populated with the split values.</returns>
         public static ISet<string> SplitBySemicolonToHashSet(this string input)
         {
             string[] parts = input.Split(';');
             return parts.ToHashSet();
+        }
+
+        /// <summary>
+        /// Removes emojis from the string.
+        /// </summary>
+        /// <param name="input">This string.</param>
+        /// <returns>A string with emojis removed.</returns>
+        public static string RemoveEmojis(this string input)
+        {
+            return EmojiRegex.Replace(input, "");
         }
     }
 }

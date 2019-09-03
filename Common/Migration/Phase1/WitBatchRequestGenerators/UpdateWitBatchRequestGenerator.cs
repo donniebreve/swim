@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using Newtonsoft.Json;
 using Common.ApiWrappers;
 using Logging;
+using System;
 
 namespace Common.Migration
 {
@@ -29,10 +30,9 @@ namespace Common.Migration
                 int targetId = targetIdToSourceWorkItem.Key;
                 WorkItem sourceWorkItem = targetIdToSourceWorkItem.Value;
 
-                if (WorkItemHasFailureState(sourceWorkItem))
-                {
-                    continue;
-                }
+                if (WorkItemHasFailureState(sourceWorkItem)) continue;
+
+                sourceWorkItem.Fields["System.ChangedDate"] = DateTime.Now;
 
                 WitBatchRequest witBatchRequest = GenerateWitBatchRequestFromWorkItem(sourceWorkItem, targetId);
                 if (witBatchRequest != null)

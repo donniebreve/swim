@@ -1,12 +1,12 @@
 {
   "source-connection": {
-    "account": "https://dev.azure.com/fabrikam",
+    "uri": "https://dev.azure.com/fabrikam",
     "project": "fabricam-project",
     "access-token": "surf54m2is4yict2sdsdsdsdsdsewrcn4jolgprjmr4rjq",
     "use-integrated-auth": "false"
   },
   "target-connection": {
-    "account": "https://dev.azure.com/contoso",
+    "uri": "https://dev.azure.com/contoso",
     "project": "contoso-project",
     "access-token": "urf54m2is4yict2ewrhsdkshdkjsdscn4jolgprjmr4rjq",
     "use-integrated-auth": "false"
@@ -14,18 +14,22 @@
   "query": "Shared Queries/Website/All Tasks",
   "create-new-work-items": true,
   "update-modified-work-items": true,
-  "overwrite-work-items": false,
+  "overwrite-existing-work-items": false,
   "heartbeat-frequency-in-seconds": 30,
   "query-page-size": 20000,
   "parallelism": 1,
   "max-attachment-size": 62914560,
   "link-parallelism": 1,
   "attachment-upload-chunk-size": 1048576,
-  "move-history": false,
-  "move-history-limit": 200,
-  "move-git-links": false,
-  "move-attachments": false,
-  "move-links": true,
+  "migrate-identities": false,
+  "remove-emojis-from-identity-display-names": false,
+  "identity-mappings": {},
+  "migrate-comments":  false,
+  "migrate-history": false,
+  "history-limit": 200,
+  "migrate-git-links": false,
+  "migrate-attachments": false,
+  "migrate-links": true,
   "source-post-move-tag": "6F078B6C-2A96-453B-A7C3-EACE6E63BB97",
   "target-post-move-tag": "6F078B6C-2A96-453B-A7C3-EACE6E63BB97",
   "skip-work-items-with-type-missing-fields": false,
@@ -33,9 +37,6 @@
   "skip-work-items-with-missing-iteration-path": false,
   "default-area-path": "contoso-project\\missing area path",
   "default-iteration-path": "contoso-project\\missing iteration path",
-  "clear-identity-display-names": false,
-  "ensure-identities": false,
-  "log-level-for-file": "information",
   "field-mappings": {},
   "field-substitutions": {},
   "field-replacements": {},
@@ -51,5 +52,6 @@
       "test1@test.com",
       "test2@test.com"
     ]
-  }
+  },
+  "log-level-for-file": "information"
 }

@@ -17,7 +17,7 @@ namespace Common.Validation
 
         public async Task Validate(IValidationContext context)
         {
-            if (context.Configuration.MoveLinks)
+            if (context.Configuration.MigrateLinks)
             {
                 await VerifyRelationTypesExistsOnTarget(context);
             }

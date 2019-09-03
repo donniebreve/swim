@@ -18,7 +18,7 @@ namespace Common.Migration
 
         public bool IsEnabled(IConfiguration configuration)
         {
-            return configuration.MoveHistory;
+            return configuration.MigrateHistory;
         }
 
         public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
@@ -39,10 +39,15 @@ namespace Common.Migration
             return jsonPatchOperations;
         }
 
+        private async Task<byte[]> GetWorkItemHistoryDocument(WorkItem workItem, string fileType, IContext context)
+        {
+
+        }
+
         private async Task<IList<AttachmentLink>> UploadAttachmentsToTarget(IMigrationContext migrationContext, WorkItem sourceWorkItem)
         {
             var attachmentLinks = new List<AttachmentLink>();
-            int updateLimit = migrationContext.Configuration.MoveHistoryLimit;
+            int updateLimit = migrationContext.Configuration.HistoryLimit;
             int updateCount = 0;
 
             while (updateCount < updateLimit)

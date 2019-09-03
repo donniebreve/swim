@@ -4,18 +4,18 @@ using Newtonsoft.Json;
 namespace Common.Configuration.Json
 {
     /// <summary>
-    /// Maps a source field to a different target field.
+    /// Maps a source identity to a target identity..
     /// </summary>
-    public class FieldMapping : IFieldMapping
+    public class IdentityMapping : IIdentityMapping
     {
         /// <summary>
-        /// The source field name.
+        /// The source identity.
         /// </summary>
         [JsonProperty(PropertyName = "source", Required = Required.Always)]
         public string Source { get; set; }
 
         /// <summary>
-        /// The target field name.
+        /// The target identity.
         /// </summary>
         [JsonProperty(PropertyName = "target", Required = Required.Always)]
         public string Target { get; set; }

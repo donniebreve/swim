@@ -2,22 +2,39 @@
 
 namespace Common.Configuration.Json
 {
+    /// <summary>
+    /// Describes a connection to a TFS instance.
+    /// </summary>
     public class Connection : IConnection
     {
+        /// <summary>
+        /// The connection URI.
+        /// </summary>
         [JsonProperty(Required = Required.Always)]
-        public string Account { get; set; }
+        public string Uri { get; set; }
 
+        /// <summary>
+        /// The default project.
+        /// </summary>
         [JsonProperty(Required = Required.Always)]
         public string Project { get; set; }
 
+        /// <summary>
+        /// The access token.
+        /// </summary>
         [JsonProperty(PropertyName = "access-token", Required = Required.DisallowNull)]
         public string AccessToken { get; set; }
 
+        /// <summary>
+        /// If this connection should use integrated authentication.
+        /// </summary>
         [JsonProperty(PropertyName = "use-integrated-auth", Required = Required.DisallowNull)]
         public bool UseIntegratedAuth { get; set; }
 
-        // used by JSON.NET to control weather or not AccessToken gets serialized.
-        // JSON.NET just knows to apply it to AccessToken because it’s in the method name.
+        /// <summary>
+        /// If the field should be serialized.
+        /// </summary>
+        /// <returns>False</returns>
         public bool ShouldSerializeAccessToken()
         {
             return false;

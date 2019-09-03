@@ -40,7 +40,7 @@ namespace Common.Validation
 
             await ValidateWorkItemMetadata();
 
-            // Find already migrated work items
+            // Find already existing work items
             await WorkItemTrackingHelper.IdentifyMigratedWorkItems(this._context);
 
             await ValidateTargetWorkItems();
@@ -85,7 +85,7 @@ namespace Common.Validation
             if (this._context.Configuration.UpdateModifiedWorkItems && workItemsToUpdate.Any())
             {
                 Logger.LogInformation($"{workItemsToUpdate.Count()} work item(s) will be updated in the target.");
-                if (this._context.Configuration.MoveLinks)
+                if (this._context.Configuration.MigrateLinks)
                 {
                     Logger.LogInformation("Move-Links is set to true, additional work items may be included for link processing if they had any link changes");
                 }

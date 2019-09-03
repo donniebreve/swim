@@ -19,7 +19,7 @@ namespace Common.Migration
 
         public bool IsEnabled(IConfiguration configuration)
         {
-            return configuration.MoveAttachments;
+            return configuration.MigrateAttachments;
         }
 
         public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
@@ -42,27 +42,41 @@ namespace Common.Migration
             {
                 foreach (WorkItemRelation sourceAttachmentWorkItemRelation in sourceAttachmentWorkItemRelations)
                 {
-                    WorkItemRelation targetAttachmentRelation = GetAttachmentIfExistsOnTarget(targetWorkItem, sourceAttachmentWorkItemRelation);
+                    WorkItemRelation targetAttachmentRelation = FindAttachmentRelation(targetWorkItem, sourceAttachmentWorkItemRelation);
 
-                    if (targetAttachmentRelation != null) // is on target
+                    // The attachment exists on the target instance
+                    if (targetAttachmentRelation != null)
                     {
-                        JsonPatchOperation attachmentAddOperation = MigrationHelpers.GetRelationAddOperation(targetAttachmentRelation);
-                        jsonPatchOperations.Add(attachmentAddOperation);
+                        // Do nothing? right? wtf
+                        //JsonPatchOperation attachmentAddOperation = MigrationHelpers.GetRelationAddOperation(targetAttachmentRelation);
+                        //jsonPatchOperations.Add(attachmentAddOperation);
                     }
-                    else // is not on target
+                    else
                     {
+                        // The attachment does not exist on the target instance
                         AttachmentLink attachmentLink = await UploadAttachmentFromSourceRelation(migrationContext, batchContext, sourceWorkItem, sourceAttachmentWorkItemRelation, migrationContext.Configuration.MaxAttachmentSize);
                         if (attachmentLink != null)
                         {
-                            WorkItemRelation newAttachmentWorkItemRelation = new WorkItemRelation();
-                            newAttachmentWorkItemRelation.Rel = sourceAttachmentWorkItemRelation.Rel;
-                            newAttachmentWorkItemRelation.Url = attachmentLink.AttachmentReference.Url;
-                            newAttachmentWorkItemRelation.Attributes = new Dictionary<string, object>();
-                            newAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeName] = attachmentLink.FileName;
-                            newAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeResourceSize] = attachmentLink.ResourceSize;
-                            newAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeComment] = attachmentLink.Comment;
+                            WorkItemRelation workItemRelation = new WorkItemRelation();
 
-                            JsonPatchOperation attachmentAddOperation = MigrationHelpers.GetRelationAddOperation(newAttachmentWorkItemRelation);
+                            //newAttachmentWorkItemRelation.Rel = sourceAttachmentWorkItemRelation.Rel;
+                            //newAttachmentWorkItemRelation.Url = attachmentLink.AttachmentReference.Url;
+                            //newAttachmentWorkItemRelation.Attributes = new Dictionary<string, object>();
+                            //newAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeName] = attachmentLink.FileName;
+                            //newAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeResourceSize] = attachmentLink.ResourceSize;
+                            //newAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeComment] = attachmentLink.Comment;
+                            //newAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeResourceModifiedDate] = attachmentLink.Comment;
+
+                            workItemRelation.Rel = sourceAttachmentWorkItemRelation.Rel;
+                            workItemRelation.Url = attachmentLink.AttachmentReference.Url;
+                            workItemRelation.Attributes = new Dictionary<string, object>();
+                            workItemRelation.Attributes[Constants.RelationAttributeName] = sourceAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeName];
+                            workItemRelation.Attributes[Constants.RelationAttributeResourceSize] = sourceAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeResourceSize];
+                            workItemRelation.Attributes[Constants.RelationAttributeResourceModifiedDate] = sourceAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeResourceModifiedDate];
+                            if (sourceAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeComment] != null)
+                                workItemRelation.Attributes[Constants.RelationAttributeComment] = sourceAttachmentWorkItemRelation.Attributes[Constants.RelationAttributeComment];
+
+                            JsonPatchOperation attachmentAddOperation = MigrationHelpers.GetRelationAddOperation(workItemRelation);
                             jsonPatchOperations.Add(attachmentAddOperation);
                         }
                     }
@@ -72,21 +86,31 @@ namespace Common.Migration
             return jsonPatchOperations;
         }
 
-        private WorkItemRelation GetAttachmentIfExistsOnTarget(WorkItem targetWorkItem, WorkItemRelation sourceRelation)
+        private WorkItemRelation FindAttachmentRelation(WorkItem targetWorkItem, WorkItemRelation sourceRelation)
         {
             if (targetWorkItem.Relations == null)
             {
                 return null;
             }
-
             foreach (WorkItemRelation targetRelation in targetWorkItem.Relations)
             {
-                if (targetRelation.Rel.Equals(Constants.AttachedFile) && targetRelation.Url.Equals(sourceRelation.Url, StringComparison.OrdinalIgnoreCase))
+                if (targetRelation.Rel == "AttachedFile")
                 {
-                    return targetRelation;
+                    // To do: I think this sould be name and modified date, but the correct modified date is not being sent when migrating
+                    if (targetRelation.Attributes["name"] != null
+                        && sourceRelation.Attributes["name"] != null
+                        && targetRelation.Attributes["name"].Equals(sourceRelation.Attributes["name"])
+                        && targetRelation.Attributes["resourceSize"] != null
+                        && sourceRelation.Attributes["resourceSize"] != null
+                        && targetRelation.Attributes["resourceSize"].Equals(sourceRelation.Attributes["resourceSize"]))
+                        //&& targetRelation.Attributes["resourceModifiedDate"] != null
+                        //&& sourceRelation.Attributes["resourceModifiedDate"] != null
+                        //&& targetRelation.Attributes["resourceModifiedDate"] == sourceRelation.Attributes["resourceModifiedDate"])
+                    {
+                        return targetRelation;
+                    }
                 }
             }
-
             return null;
         }
 

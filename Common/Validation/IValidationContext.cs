@@ -32,6 +32,8 @@ namespace Common.Validation
 
         ISet<string> IdentityFields { get; set; }
 
+        ISet<string> SourceIdentities { get; set; }
+
         ConcurrentSet<string> SkippedTypes { get; }
 
         ConcurrentSet<string> SkippedFields { get; }

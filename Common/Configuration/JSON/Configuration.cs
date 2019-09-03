@@ -30,9 +30,9 @@ namespace Common.Configuration.Json
         [DefaultValue(true)]
         public bool UpdateModifiedWorkItems { get; set; }
 
-        [JsonProperty(PropertyName = "overwrite-work-items", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [JsonProperty(PropertyName = "overwrite-existing-work-items", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]
-        public bool OverwriteWorkItems { get; set; }
+        public bool OverwriteExistingWorkItems { get; set; }
 
         [JsonProperty(PropertyName = "parallelism", DefaultValueHandling = DefaultValueHandling.Populate)]
         public int Parallelism { get; set; }
@@ -56,25 +56,41 @@ namespace Common.Configuration.Json
         [DefaultValue(1 * 1024 * 1024)]
         public int AttachmentUploadChunkSize { get; set; }
 
-        [JsonProperty(PropertyName = "move-history", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [JsonProperty(PropertyName = "migrate-identities", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]
-        public bool MoveHistory { get; set; }
+        public bool MigrateIdentities { get; set; }
 
-        [JsonProperty(PropertyName = "move-history-limit", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [JsonProperty(PropertyName = "remove-emojis-from-identity-display-names", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(false)]
+        public bool RemoveEmojisFromIdentityDisplayNames { get; set; }
+
+        [JsonConverter(typeof(ConcreteListConverter<IIdentityMapping, IdentityMapping>))]
+        [JsonProperty(PropertyName = "identity-mappings", DefaultValueHandling = DefaultValueHandling.Populate)]
+        public IList<IIdentityMapping> IdentityMappings { get; set; }
+
+        [JsonProperty(PropertyName = "migrate-comments", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(false)]
+        public bool MigrateComments { get; set; }
+
+        [JsonProperty(PropertyName = "migrate-history", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(false)]
+        public bool MigrateHistory { get; set; }
+
+        [JsonProperty(PropertyName = "history-limit", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(200)]
-        public int MoveHistoryLimit { get; set; }
+        public int HistoryLimit { get; set; }
 
-        [JsonProperty(PropertyName = "move-git-links", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [JsonProperty(PropertyName = "migrate-git-links", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]
-        public bool MoveGitLinks { get; set; }
+        public bool MigrateGitLinks { get; set; }
 
-        [JsonProperty(PropertyName = "move-attachments", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [JsonProperty(PropertyName = "migrate-attachments", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]
-        public bool MoveAttachments { get; set; }
+        public bool MigrateAttachments { get; set; }
 
-        [JsonProperty(PropertyName = "move-links", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [JsonProperty(PropertyName = "migrate-links", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]
-        public bool MoveLinks { get; set; }
+        public bool MigrateLinks { get; set; }
 
         [JsonProperty(PropertyName = "source-post-move-tag", DefaultValueHandling = DefaultValueHandling.Populate)]
         public string SourcePostMoveTag { get; set; }
@@ -100,18 +116,6 @@ namespace Common.Configuration.Json
         [JsonProperty(PropertyName = "default-iteration-path", DefaultValueHandling = DefaultValueHandling.Populate)]
         public string DefaultIterationPath { get; set; }
 
-        [JsonProperty(PropertyName = "clear-identity-display-names", DefaultValueHandling = DefaultValueHandling.Populate)]
-        [DefaultValue(false)]
-        public bool ClearIdentityDisplayNames { get; set; }
-
-        [JsonProperty(PropertyName = "ensure-identities", DefaultValueHandling = DefaultValueHandling.Populate)]
-        [DefaultValue(false)]
-        public bool EnsureIdentities { get; set; }
-
-        [JsonProperty(PropertyName = "log-level-for-file", DefaultValueHandling = DefaultValueHandling.Populate)]
-        [DefaultValue(LogLevel.Information)]
-        public LogLevel LogLevelForFile { get; set; }
-
         [JsonConverter(typeof(ConcreteListConverter<IFieldMapping, FieldMapping>))]
         [JsonProperty(PropertyName = "field-mappings", DefaultValueHandling = DefaultValueHandling.Populate)]
         public IList<IFieldMapping> FieldMappings { get; set; }
@@ -131,5 +135,9 @@ namespace Common.Configuration.Json
         [JsonConverter(typeof(ConcreteTypeConverter<EmailSettings>))]
         [JsonProperty(PropertyName = "email-settings", Required = Required.DisallowNull)]
         public IEmailSettings EmailSettings { get; set; }
+
+        [JsonProperty(PropertyName = "log-level-for-file", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(LogLevel.Information)]
+        public LogLevel LogLevelForFile { get; set; }
     }
 }

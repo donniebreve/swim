@@ -29,7 +29,7 @@ namespace Common.Migration
 
         public bool IsEnabled(IConfiguration configuration)
         {
-            return configuration.EnsureIdentities;
+            return configuration.MigrateIdentities;
         }
 
         public async Task Prepare(IMigrationContext context)

@@ -36,6 +36,8 @@ namespace Common.Validation
 
         public ISet<string> IdentityFields { get; set; }
 
+        public ISet<string> SourceIdentities { get; set; }
+
         public ConcurrentSet<string> SkippedTypes { get; } = new ConcurrentSet<string>(StringComparer.CurrentCultureIgnoreCase);
 
         public ConcurrentSet<string> SkippedFields { get; } = new ConcurrentSet<string>(StringComparer.CurrentCultureIgnoreCase);

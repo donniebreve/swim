@@ -149,7 +149,6 @@ namespace Common.Validation
 
         private void ProcessUpdatedSourceWorkItem(WorkItem targetWorkItem, WorkItemMigrationState workItemMigrationState, WorkItemRelation hyperlinkToSourceRelation)
         {
-            // To do
             //get the source rev from the revision dictionary - populated by PostValidateWorkitems
             int sourceId = workItemMigrationState.SourceId;
             int sourceRev = workItemMigrationState.SourceRevision;
@@ -158,7 +157,7 @@ namespace Common.Validation
 
             workItemMigrationState.Requirement = 0;
 
-            if (this._context.Configuration.OverwriteWorkItems)
+            if (this._context.Configuration.OverwriteExistingWorkItems)
             {
                 Logger.LogInformation(LogDestination.File, $"Target work item will be updated. Source workItem {sourceId}, Target workitem {targetWorkItem.Id}");
                 this.sourceWorkItemIdsThatHaveBeenUpdated.Add(sourceId);

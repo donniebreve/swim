@@ -43,6 +43,9 @@ namespace Common.Validation
                 // We need all fields to validate the field types
                 var targetFields = (await WorkItemTrackingHelper.GetFields(context.TargetClient.WorkItemTrackingHttpClient)).ToDictionary(key => key.ReferenceName);
                 context.TargetFields = new ConcurrentDictionary<string, WorkItemField>(targetFields, StringComparer.CurrentCultureIgnoreCase);
+
+                // To do: this part where the validation gathers the source and target fields should be moved somewhere else
+                // To do: why use the target identity fields and not the source identity fields? maybe this should include both source and target identity fields?
                 context.IdentityFields = new HashSet<string>(targetFields.Where(f => f.Value.IsIdentity).Select(f => f.Key), StringComparer.CurrentCultureIgnoreCase);
             }
             catch (Exception e)
@@ -94,16 +97,16 @@ namespace Common.Validation
             }
             foreach (var mapping in context.Configuration.FieldMappings)
             {
-                if (!context.SourceFields.ContainsKeyIgnoringCase(mapping.SourceField))
+                if (!context.SourceFields.ContainsKeyIgnoringCase(mapping.Source))
                 {
-                    throw new ValidationException($"Source fields do not contain {mapping.SourceField} that is specified in the configuration file.");
+                    throw new ValidationException($"Source fields do not contain {mapping.Source} that is specified in the configuration file.");
                 }
-                if (!context.TargetFields.ContainsKeyIgnoringCase(mapping.TargetField))
+                if (!context.TargetFields.ContainsKeyIgnoringCase(mapping.Target))
                 {
-                    throw new ValidationException($"Target does not contain the field-reference-name you provided: {mapping.TargetField}.");
+                    throw new ValidationException($"Target does not contain the field-reference-name you provided: {mapping.Target}.");
                 }
-                if (context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject.Contains(mapping.SourceField, StringComparer.OrdinalIgnoreCase)
-                    || context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject.Contains(mapping.TargetField, StringComparer.OrdinalIgnoreCase))
+                if (context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject.Contains(mapping.Source, StringComparer.OrdinalIgnoreCase)
+                    || context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject.Contains(mapping.Target, StringComparer.OrdinalIgnoreCase))
                 {
                     string unsupportedFields = string.Join(", ", context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject);
                     throw new ValidationException($"Source fields or field-reference-name cannot be set to any of: {unsupportedFields} in the configuration file.");
@@ -143,14 +146,11 @@ namespace Common.Validation
 
             var matches = false;
             var exists = false;
-            if (context.TargetTypesAndFields.ContainsKey(type) &&
-                context.SourceTypesAndFields.ContainsKey(type))
+            if (context.TargetTypesAndFields.ContainsKey(type) && context.SourceTypesAndFields.ContainsKey(type))
             {
                 exists = true;
-
                 var targetWorkItemTypeFields = context.TargetTypesAndFields[type];
                 var sourceWorkItemTypeFields = context.SourceTypesAndFields[type];
-
                 matches = this.CompareWorkItemType(context, type, sourceWorkItemTypeFields, targetWorkItemTypeFields);
             }
 
@@ -209,7 +209,7 @@ namespace Common.Validation
                     {
                         foreach (var mapping in context.Configuration.FieldMappings)
                         {
-                            if (mapping.SourceField == field) targetFieldName = mapping.TargetField;
+                            if (mapping.Source == field) targetFieldName = mapping.Target;
                         }
                     }
                     // Check that the target field exists

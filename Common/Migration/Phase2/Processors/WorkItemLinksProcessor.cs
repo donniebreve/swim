@@ -19,7 +19,7 @@ namespace Common.Migration
 
         public bool IsEnabled(IConfiguration configuration)
         {
-            return configuration.MoveLinks;
+            return configuration.MigrateLinks;
         }
 
         public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
@@ -29,7 +29,7 @@ namespace Common.Migration
             {
                 var relations = GetWorkItemLinkRelations(migrationContext, sourceWorkItem.Relations);
                 var linkedIds = relations.Select(r => ClientHelpers.GetWorkItemIdFromApiEndpoint(r.Url));
-                var uris = linkedIds.Where(id => !migrationContext.SourceToTargetIds.ContainsKey(id)).Select(id => ClientHelpers.GetWorkItemApiEndpoint(migrationContext.Configuration.SourceConnection.Account, id));
+                var uris = linkedIds.Where(id => !migrationContext.SourceToTargetIds.ContainsKey(id)).Select(id => ClientHelpers.GetWorkItemApiEndpoint(migrationContext.Configuration.SourceConnection.Uri, id));
                 linkedWorkItemArtifactUrls.AddRange(uris);
             }
 
