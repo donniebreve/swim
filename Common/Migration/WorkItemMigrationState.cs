@@ -16,6 +16,15 @@ namespace Common.Migration
 
         public FailureReason FailureReason { get; set; }
 
+        /// <summary>
+        /// Adds a failure reason to this WorkItemMigrationState.
+        /// </summary>
+        /// <param name="failureReason">The failure reason.</param>
+        public void AddFailureReason(FailureReason failureReason)
+        {
+            this.FailureReason |= failureReason;
+        }
+
         public RequirementForExisting Requirement { get; set; }
         public MigrationCompletionStatus MigrationCompleted { get; set; }
 

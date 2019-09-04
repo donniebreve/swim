@@ -42,14 +42,6 @@ namespace Common
             }, 5);
         }
 
-        public async static Task<List<WorkItemUpdate>> GetWorkItemUpdatesAsync(WorkItemTrackingHttpClient client, int id, int skip = 0)
-        {
-            return await RetryHelper.RetryAsync(async () =>
-            {
-                return await client.GetUpdatesAsync(id, Constants.PageSize, skip: skip);
-            }, 5);
-        }
-
         public async static Task<List<WorkItemRelationType>> GetRelationTypesAsync(WorkItemTrackingHttpClient client)
         {
             return await RetryHelper.RetryAsync(async () =>
@@ -58,31 +50,17 @@ namespace Common
             }, 5);
         }
 
-        public async static Task<AttachmentReference> CreateAttachmentAsync(WorkItemTrackingHttpClient client, MemoryStream uploadStream)
-        {
-            return await RetryHelper.RetryAsync(async () =>
-            {
-                // clone the stream since if upload fails it disploses the underlying stream
-                using (var clonedStream = new MemoryStream())
-                {
-                    await uploadStream.CopyToAsync(clonedStream);
-
-                    // reset position for both streams
-                    uploadStream.Position = 0;
-                    clonedStream.Position = 0;
-
-                    return await client.CreateAttachmentAsync(clonedStream);
-                }
-            }, 5);
-        }
-
         public async static Task<AttachmentReference> CreateAttachmentChunkedAsync(WorkItemTrackingHttpClient client, VssConnection connection, MemoryStream uploadStream, int chunkSizeInBytes)
         {
+            // To do: Cleanup
+
+            // Why would there be an empty attachment?
+
             // it's possible for the attachment to be empty, if so we can't used the chunked upload and need
             // to fallback to the normal upload path.
             if (uploadStream.Length == 0)
             {
-                return await CreateAttachmentAsync(client, uploadStream);
+                return await WorkItemApi.CreateAttachmentAsync(client, null);
             }
 
             var requestSettings = new VssHttpRequestSettings
@@ -145,14 +123,6 @@ namespace Common
             }
 
             return attachmentReference;
-        }
-
-        public async static Task<Stream> GetAttachmentAsync(WorkItemTrackingHttpClient client, Guid id)
-        {
-            return await RetryHelper.RetryAsync(async () =>
-            {
-                return await client.GetAttachmentContentAsync(id);
-            }, 5);
         }
 
 
@@ -347,46 +317,7 @@ namespace Common
                             }
                             if (workItemReferences.Count() == 1)
                             {
-
-
-
-
-
-
-
-
-
-
-                                // To do
-                                ////get the source rev from the revision dictionary - populated by PostValidateWorkitems
-                                //int sourceId = workItemMigrationState.SourceId;
-                                //int sourceRev = ValidationContext.SourceWorkItemRevision[sourceId];
-                                //string sourceUrl = ValidationContext.WorkItemIdsUris[sourceId];
-                                //int targetRev = GetRev(this.ValidationContext, targetWorkItem, sourceId, hyperlinkToSourceRelation);
-
-                                //if (IsDifferenceInRevNumbers(sourceId, targetWorkItem, hyperlinkToSourceRelation, targetRev))
-                                //{
-                                //    Logger.LogInformation(LogDestination.File, $"Source workItem {sourceId} Rev {sourceRev} Target workitem {targetWorkItem.Id} Rev {targetRev}");
-                                //    this.sourceWorkItemIdsThatHaveBeenUpdated.Add(sourceId);
-                                //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase1;
-                                //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
-                                //}
-                                //else if (IsPhase2UpdateRequired(workItemMigrationState, targetWorkItem))
-                                //{
-                                //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
-                                //}
-                                //else
-                                //{
-                                //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.None;
-                                //}
-
-
-
-
-
-
-
-
+                                // To do: Move reading the revision here and detecting updates
                                 workItem.MigrationAction = MigrationAction.Update;
                                 workItem.TargetId = workItemReferences.First().Id;
                                 workItem.TargetUri = new Uri(workItemReferences.First().Url);

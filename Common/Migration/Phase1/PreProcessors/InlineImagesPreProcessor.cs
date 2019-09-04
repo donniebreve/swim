@@ -1,4 +1,5 @@
-﻿using Common.Configuration;
+﻿using Common.Api;
+using Common.Configuration;
 using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
@@ -98,7 +99,7 @@ namespace Common.Migration
         /// </summary>
         /// <param name="inlineImageUrl"></param>
         /// <returns></returns>
-        private async Task<string> UploadInlineImageAttachmentFromSourceWorkItemToTarget(IBatchMigrationContext batchContext, string inlineImageUrl, int sourceWorkItemId, int maxAttachmentSize)
+        private async Task<string> UploadInlineImageAttachmentFromSourceWorkItemToTarget(IBatchMigrationContext batchContext, string inlineImageUrl, int sourceWorkItemId, long maxAttachmentSize)
         {
             Guid sourceGuid = MigrationHelpers.GetAttachmentUrlGuid(inlineImageUrl);
             string targetGuid = null;
@@ -115,7 +116,7 @@ namespace Common.Migration
             try
             {
                 Logger.LogTrace(LogDestination.File, $"Reading inline image {inlineImageUrl} for source work item {sourceWorkItemId} from the source account");
-                stream = await WorkItemTrackingHelper.GetAttachmentAsync(this.context.SourceClient.WorkItemTrackingHttpClient, sourceGuid);
+                stream = await WorkItemApi.GetAttachmentAsync(this.context.SourceClient.WorkItemTrackingHttpClient, sourceGuid);
                 Logger.LogTrace(LogDestination.File, $"Completed reading inline image {inlineImageUrl} for source work item {sourceWorkItemId} from the source account");
             }
             catch (Exception e)

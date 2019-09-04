@@ -43,11 +43,10 @@ namespace Common.Configuration
         int QueryPageSize { get; set; }
 
         [DefaultValue(null)]
-        int MaxAttachmentSize { get; set; }
+        long MaxAttachmentSize { get; set; }
 
         [DefaultValue(null)]
         int AttachmentUploadChunkSize { get; set; }
-
 
         [DefaultValue(false)]
         bool MigrateIdentities { get; set; }
@@ -61,6 +60,9 @@ namespace Common.Configuration
         [DefaultValue(false)]
         bool MigrateHistory { get; set; }
 
+        [DefaultValue(false)]
+        string HistoryAttachmentFormat { get; set; }
+
         [DefaultValue(200)]
         int HistoryLimit { get; set; }
 
@@ -72,7 +74,6 @@ namespace Common.Configuration
 
         [DefaultValue(false)]
         bool MigrateLinks { get; set; }
-        
 
         [DefaultValue(null)]
         string SourcePostMoveTag { get; set; }

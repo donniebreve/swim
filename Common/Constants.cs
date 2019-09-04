@@ -2,6 +2,7 @@
 
 namespace Common
 {
+    // To do: break these into appropriate containers, e.g. WorkItemFields, WorkItemRelationAttributes, etc.
     public class Constants
     {
         public const int BatchSize = 200;

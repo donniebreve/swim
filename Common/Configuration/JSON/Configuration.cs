@@ -50,7 +50,7 @@ namespace Common.Configuration.Json
 
         [JsonProperty(PropertyName = "max-attachment-size", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(60 * 1024 * 1024)]
-        public int MaxAttachmentSize { get; set; }
+        public long MaxAttachmentSize { get; set; }
 
         [JsonProperty(PropertyName = "attachment-upload-chunk-size", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(1 * 1024 * 1024)]
@@ -75,6 +75,10 @@ namespace Common.Configuration.Json
         [JsonProperty(PropertyName = "migrate-history", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]
         public bool MigrateHistory { get; set; }
+
+        [JsonProperty(PropertyName = "history-attachment-format", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(".json")]
+        public string HistoryAttachmentFormat { get; set; }
 
         [JsonProperty(PropertyName = "history-limit", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(200)]

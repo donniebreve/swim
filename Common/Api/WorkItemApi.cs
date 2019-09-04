@@ -5,6 +5,7 @@ using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.Common;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,6 +17,34 @@ namespace Common.Api
         private static ILogger Logger { get; } = MigratorLogging.CreateLogger<WorkItemApi>();
 
         private const int _retry = 5;
+
+        /// <summary>
+        /// Creates an attachment.
+        /// </summary>
+        /// <param name="client">The WorkItemTrackingHttpClient.</param>
+        /// <param name="data">The attachment data.</param>
+        /// <returns>A new AttachmentReference.</returns>
+        public async static Task<AttachmentReference> CreateAttachmentAsync(WorkItemTrackingHttpClient client, Stream stream)
+        {
+            return await RetryAsync(async () =>
+            {
+                return await client.CreateAttachmentAsync(stream);
+            });
+        }
+
+        /// <summary>
+        /// Gets the attachment data.
+        /// </summary>
+        /// <param name="client">The WorkItemTrackingHttpClient.</param>
+        /// <param name="guid">The attachment GUID.</param>
+        /// <returns>A stream to the attachment data.</returns>
+        public async static Task<Stream> GetAttachmentAsync(WorkItemTrackingHttpClient client, Guid guid)
+        {
+            return await RetryAsync(async () =>
+            {
+                return await client.GetAttachmentContentAsync(guid);
+            });
+        }
 
         /// <summary>
         /// Gets the work item for the given ID.
@@ -44,6 +73,38 @@ namespace Common.Api
             return await RetryAsync(async () =>
             {
                 return await client.GetWorkItemsAsync(ids, fields: fields, expand: expand);
+            });
+        }
+
+        /// <summary>
+        /// Gets the revisions for a work item. Includes all fields of the work item.
+        /// </summary>
+        /// <param name="client">The WorkItemTrackingHttpClient.</param>
+        /// <param name="id">The work item id.</param>
+        /// <param name="top">The number of results to return.</param>
+        /// <param name="skip">The number of results to skip.</param>
+        /// <returns>A WorkItem.</returns>
+        public static async Task<List<WorkItem>> GetRevisionsAsync(WorkItemTrackingHttpClient client, int id, int? top = null, int? skip = null, WorkItemExpand? expand = null)
+        {
+            return await RetryAsync(async () =>
+            {
+                return await client.GetRevisionsAsync(id, top: top, skip: skip, expand: expand);
+            });
+        }
+
+        /// <summary>
+        /// Gets the work item updates (history).
+        /// </summary>
+        /// <param name="client">The WorkItemTrackingHttpClient.</param>
+        /// <param name="id">The work item id.</param>
+        /// <param name="top">The number of results to return.</param>
+        /// <param name="skip">The number of results to skip.</param>
+        /// <returns>A list of the work item updates.</returns>
+        public async static Task<List<WorkItemUpdate>> GetUpdatesAsync(WorkItemTrackingHttpClient client, int id, int? top = null, int? skip = null)
+        {
+            return await RetryAsync(async () =>
+            {
+                return await client.GetUpdatesAsync(id, top: top, skip: skip);
             });
         }
 
@@ -92,7 +153,18 @@ namespace Common.Api
             });
         }
 
-        private static async Task<T> RetryAsync<T>(Func<Task<T>> function, Func<Guid, Exception, Task<Exception>> exceptionHandler = null, int retryCount = _retry, int secsDelay = 1)
+
+
+        /// <summary>
+        /// Retries the function if it fails.
+        /// </summary>
+        /// <typeparam name="T">The return type.</typeparam>
+        /// <param name="function">The function.</param>
+        /// <param name="exceptionHandler">An optional exception handler.</param>
+        /// <param name="retryCount">An optional retry count (default 5).</param>
+        /// <param name="secsDelay">An optional delay between retries (default 1s).</param>
+        /// <returns>The result of the function.</returns>
+        private static async Task<T> RetryAsync<T>(Func<Task<T>> function, Func<Guid, Exception, Task<Exception>> exceptionHandler = null, int retryCount = _retry, int delay = 1)
         {
             Guid requestId = Guid.NewGuid();
             Exception exception = null;
@@ -127,12 +199,12 @@ namespace Common.Api
                     }
 
                     succeeded = false;
-                    Logger.LogTrace(LogDestination.File, $"Sleeping for {secsDelay} seconds and retrying {requestId} again.");
+                    Logger.LogTrace(LogDestination.File, $"Sleeping for {delay} seconds and retrying {requestId} again.");
 
-                    await Task.Delay(secsDelay * 1000);
+                    await Task.Delay(delay * 1000);
 
                     // add 1 second to delay so that each delay is slightly incrementing in wait time
-                    secsDelay += 1;
+                    delay += 1;
                 }
                 finally
                 {
