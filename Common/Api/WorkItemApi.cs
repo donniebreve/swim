@@ -77,6 +77,21 @@ namespace Common.Api
         }
 
         /// <summary>
+        /// Gets the work items comments.
+        /// </summary>
+        /// <param name="client">The WorkItemTrackingHttpClient.</param>
+        /// <param name="id">The work item ID.</param>
+        /// <returns>A WorkItemComments object.</returns>
+        public async static Task<WorkItemComments> GetCommentsAsync(WorkItemTrackingHttpClient client, int id)
+        {
+            return await RetryAsync(async () =>
+            {
+                // This method does not have a skip... is it not possible to get all the comments using top/skip?
+                return await client.GetCommentsAsync(id);
+            });
+        }
+
+        /// <summary>
         /// Gets the revisions for a work item. Includes all fields of the work item.
         /// </summary>
         /// <param name="client">The WorkItemTrackingHttpClient.</param>
@@ -152,6 +167,22 @@ namespace Common.Api
                 return await client.QueryWorkItemsForArtifactUrisAsync(artifactUriQuery);
             });
         }
+
+
+        /// <summary>
+        /// Gets the work items comments.
+        /// </summary>
+        /// <param name="client">The WorkItemTrackingHttpClient.</param>
+        /// <param name="id">The work item ID.</param>
+        /// <returns>A WorkItemComments object.</returns>
+        public async static Task<WorkItem> UpdateWorkItemAsync(WorkItemTrackingHttpClient client, int id)
+        {
+            return await RetryAsync(async () =>
+            {
+                return await client.UpdateWorkItemAsync(null, id);
+            });
+        }
+
 
 
 

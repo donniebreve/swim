@@ -139,6 +139,15 @@ namespace Common.Migration
             return jsonPatchOperation;
         }
 
+        public static JsonPatchOperation GetCommentAddOperation(WorkItemComment comment)
+        {
+            JsonPatchOperation jsonPatchOperation = new JsonPatchOperation();
+            jsonPatchOperation.Operation = Operation.Add;
+            jsonPatchOperation.Path = $"/comments/-";
+            jsonPatchOperation.Value = comment;
+            return jsonPatchOperation;
+        }
+
         public static JsonPatchOperation GetRevisionHistoryAttachmentAddOperation(AttachmentLink attachmentLink, int workItemId)
         {
             JsonPatchOperation jsonPatchOperation = new JsonPatchOperation();

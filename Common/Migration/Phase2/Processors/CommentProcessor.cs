@@ -1,29 +1,30 @@
-﻿using Common.Configuration;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Text;
+using System.Threading.Tasks;
+using Common.Api;
+using Common.Extensions;
+using Common.Configuration;
 using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using Newtonsoft.Json;
 
-namespace Common.Migration.Phase2.Processors
+namespace Common.Migration
 {
     /// <summary>
-    /// Clears all the relations from the work item.
+    /// Migrates comments from the source work item to the target work item.
     /// </summary>
-    [RunOrder(1)]
-    public class ClearAllRelationsProcessor : IPhase2Processor
+    public class CommentProcessor : IPhase2Processor
     {
-        static ILogger Logger { get; } = MigratorLogging.CreateLogger<ClearAllRelationsProcessor>();
+        private static ILogger Logger { get; } = MigratorLogging.CreateLogger<CommentProcessor>();
 
         /// <summary>
         /// The name to use for logging.
         /// </summary>
-        /// <remarks>
-        /// This is also the name used for the description on the hyperlink to the source work item.
-        /// </remarks>
-        public string Name => Constants.RelationPhaseClearAllRelations;
+        public string Name => "Comment Processor";
 
         /// <summary>
         /// Returns true if this processor should be invoked.
@@ -32,7 +33,7 @@ namespace Common.Migration.Phase2.Processors
         /// <returns>True or false.</returns>
         public bool IsEnabled(IConfiguration configuration)
         {
-            return true;
+            return configuration.MigrateComments;
         }
 
         /// <summary>
@@ -51,22 +52,20 @@ namespace Common.Migration.Phase2.Processors
         /// <summary>
         /// Process the work item batch.
         /// </summary>
-        /// <param name="context">The migration context.</param>
+        /// <param name="migrationContext">The migration context.</param>
         /// <param name="batchContext">The batch context.</param>
         /// <param name="sourceWorkItem">The source work item.</param>
         /// <param name="targetWorkItem">The target work item.</param>
         /// <returns>A enumerable of JsonPatchOperations.</returns>
-        public async Task<IEnumerable<JsonPatchOperation>> Process(IMigrationContext migrationContext, IBatchMigrationContext batchContext, WorkItem sourceWorkItem, WorkItem targetWorkItem)
+        public async Task<IEnumerable<JsonPatchOperation>> Process(IMigrationContext context, IBatchMigrationContext batchContext, WorkItem sourceWorkItem, WorkItem targetWorkItem)
         {
-            List<JsonPatchOperation> patchOperations = new List<JsonPatchOperation>();
-            if (targetWorkItem.Relations != null)
+            IList<JsonPatchOperation> jsonPatchOperations = new List<JsonPatchOperation>();
+            var result = await WorkItemApi.GetCommentsAsync(context.SourceClient.WorkItemTrackingHttpClient, sourceWorkItem.Id.Value);
+            foreach (var comment in result.Comments)
             {
-                for (int i = 0; i < targetWorkItem.Relations.Count; i++)
-                {
-                    patchOperations.Add(MigrationHelpers.GetRelationRemoveOperation(i));
-                }
+                jsonPatchOperations.Add(MigrationHelpers.GetCommentAddOperation(comment));
             }
-            return patchOperations;
+            return jsonPatchOperations;
         }
     }
 }

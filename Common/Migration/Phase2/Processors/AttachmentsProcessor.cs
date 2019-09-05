@@ -25,7 +25,7 @@ namespace Common.Migration
         /// <summary>
         /// The name to use for logging.
         /// </summary>
-        public string Name => Constants.RelationPhaseAttachments;
+        public string Name => "Attachment Processor";
 
         /// <summary>
         /// Returns true if this processor should be invoked.
@@ -73,8 +73,9 @@ namespace Common.Migration
                 {
                     continue;
                 }
+                var attachment = targetWorkItem.FindAttachment(relation);
                 // The attachment does not already exist on the target instance
-                if (targetWorkItem.FindAttachment(relation) == null)
+                if (attachment == null)
                 {
                     // Upload the attachment to the target
                     AttachmentLink attachmentLink = await MigrateAttachment(context, sourceWorkItem, relation);
@@ -92,11 +93,11 @@ namespace Common.Migration
                             workItemRelation.Attributes[Constants.RelationAttributeComment] = attachmentLink.Comment;
                         if (relation.Attributes.ContainsKey(Constants.RelationAttributeComment))
                             workItemRelation.Attributes[Constants.RelationAttributeComment] = relation.Attributes[Constants.RelationAttributeComment];
-                        // Generate the patch operation
-                        JsonPatchOperation attachmentAddOperation = MigrationHelpers.GetRelationAddOperation(workItemRelation);
-                        jsonPatchOperations.Add(attachmentAddOperation);
                     }
                 }
+                // Generate the patch operation
+                JsonPatchOperation attachmentAddOperation = MigrationHelpers.GetRelationAddOperation(attachment);
+                jsonPatchOperations.Add(attachmentAddOperation);
             }
             return jsonPatchOperations;
         }
@@ -111,7 +112,7 @@ namespace Common.Migration
         private async Task<AttachmentLink> MigrateAttachment(IMigrationContext context, WorkItem workItem, WorkItemRelation relation)
         {
             // Only process attachments
-            if (relation.Rel != Constants.AttachedFile)
+            if (!relation.IsAttachment())
             {
                 return null;
             }
