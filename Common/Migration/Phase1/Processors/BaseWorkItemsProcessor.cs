@@ -27,7 +27,9 @@ namespace Common.Migration
 
         public async Task Process(IMigrationContext context)
         {
+
             var workItemsAndStateToMigrate = this.GetWorkItemsAndStateToMigrate(context);
+            
             var totalNumberOfBatches = ClientHelpers.GetBatchCount(workItemsAndStateToMigrate.Count, Constants.BatchSize);
 
             if (!workItemsAndStateToMigrate.Any())
@@ -80,8 +82,12 @@ namespace Common.Migration
                 {
                     stepStopwatch.Restart();
                     Logger.LogTrace(LogDestination.File, $"{this.Name} batch {batchId} of {totalNumberOfBatches}: Saving the target work items");
+
                     var witBatchRequestGenerator = this.GetWitBatchRequestGenerator(context, batchContext);
+
+                    // Go to CreateWitBatchRequestGenerator
                     await witBatchRequestGenerator.Write();
+
                     Logger.LogTrace(LogDestination.File, $"{this.Name} batch {batchId} of {totalNumberOfBatches}: Completed saving the target work items in {stepStopwatch.Elapsed.Seconds}s");
 
                     batchStopwatch.Stop();

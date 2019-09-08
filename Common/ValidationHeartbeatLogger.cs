@@ -43,7 +43,7 @@ namespace Common
             }
 
             string output = $"{line1}{Environment.NewLine}{line2}{Environment.NewLine}{line3}{Environment.NewLine}{line4}{Environment.NewLine}{line5}{Environment.NewLine}{line6}";
-            Logger.LogInformation(output);
+            Logger.LogInformation(LogDestination.File, output);
         }
 
         public void Dispose()

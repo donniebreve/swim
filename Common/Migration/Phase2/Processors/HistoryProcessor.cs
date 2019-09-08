@@ -11,15 +11,16 @@ using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using Newtonsoft.Json;
+using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
 
 namespace Common.Migration
 {
     /// <summary>
     /// Adds an attachment to the target work item containing the history of the source work item.
     /// </summary>
-    public class HistoryAttachmentProcessor : IPhase2Processor
+    public class HistoryProcessor : IPhase2Processor
     {
-        private static ILogger Logger { get; } = MigratorLogging.CreateLogger<HistoryAttachmentProcessor>();
+        private static ILogger Logger { get; } = MigratorLogging.CreateLogger<HistoryProcessor>();
 
         /// <summary>
         /// The name to use for logging.
@@ -36,60 +37,29 @@ namespace Common.Migration
             return configuration.MigrateHistory;
         }
 
-        /// <summary>
-        /// Performs work necessary prior to processing the work item batch.
-        /// </summary>
-        /// <param name="migrationContext">The migration context.</param>
-        /// <param name="batchContext">The batch context.</param>
-        /// <param name="sourceWorkItems">The list of source work items.</param>
-        /// <param name="targetWorkItems">The list of target work items.</param>
-        /// <returns>An awaitable Task.</returns>
-        public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
+        public async Task Preprocess(IContext context, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
         {
             // Nothing required
         }
 
-        /// <summary>
-        /// Process the work item batch.
-        /// </summary>
-        /// <param name="migrationContext">The migration context.</param>
-        /// <param name="batchContext">The batch context.</param>
-        /// <param name="sourceWorkItem">The source work item.</param>
-        /// <param name="targetWorkItem">The target work item.</param>
-        /// <returns>A enumerable of JsonPatchOperations.</returns>
-        public async Task<IEnumerable<JsonPatchOperation>> Process(IMigrationContext context, IBatchMigrationContext batchContext, WorkItem sourceWorkItem, WorkItem targetWorkItem)
+        public async Task<IEnumerable<JsonPatchOperation>> Process(IContext context, WorkItem sourceWorkItem, WorkItem targetWorkItem, object state = null)
         {
-            var jsonPatchOperations = new List<JsonPatchOperation>();
             // Get the work item history
             var workItemHistory = await GetWorkItemHistory(sourceWorkItem, context);
             // Convert to the desired format
             byte[] historyDocumentData = null;
-            string fileName = $"history";
+            string filename = $"history";
             if (context.Configuration.HistoryAttachmentFormat == ".json")
             {
-                fileName += ".json";
+                filename += ".json";
                 historyDocumentData = ConvertToJsonDocument(workItemHistory);
             }
             if (context.Configuration.HistoryAttachmentFormat == ".txt")
             {
-                fileName += ".txt";
+                filename += ".txt";
                 historyDocumentData = ConvertToTextDocument(workItemHistory);
             }
-            // The attachment does not already exist on the target instance, or the history has changed
-            if (targetWorkItem.FindAttachment(fileName, historyDocumentData.LongLength) == null)
-            {
-                using (MemoryStream stream = new MemoryStream(historyDocumentData))
-                {
-                    // Upload the attachment
-                    var attachmentReference = await WorkItemApi.CreateAttachmentAsync(context.TargetClient.WorkItemTrackingHttpClient, stream);
-                    // Create the attachment link
-                    var attachmentLink = new AttachmentLink(fileName, attachmentReference, historyDocumentData.LongLength);
-                    // Return the patch operation
-                    JsonPatchOperation revisionHistoryAttachmentAddOperation = MigrationHelpers.GetRevisionHistoryAttachmentAddOperation(attachmentLink, sourceWorkItem.Id.Value);
-                    jsonPatchOperations.Add(revisionHistoryAttachmentAddOperation);
-                }
-            }
-            return jsonPatchOperations;
+            return await AddHistoryAttachment(targetWorkItem, filename, historyDocumentData, context.TargetClient.WorkItemTrackingHttpClient);
         }
 
         /// <summary>
@@ -110,7 +80,7 @@ namespace Common.Migration
             while (updateCount < updateLimit)
             {
                 var itemsToRetrieve = Math.Min(Constants.PageSize, updateLimit - updateCount);
-                var results = await WorkItemApi.GetUpdatesAsync(context.SourceClient.WorkItemTrackingHttpClient, workItem.Id.Value, itemsToRetrieve, updateCount);
+                var results = await WorkItemTrackingApi.GetUpdatesAsync(context.SourceClient.WorkItemTrackingHttpClient, workItem.Id.Value, itemsToRetrieve, updateCount);
                 updateCount += results.Count;
                 workItemHistory.AddRange(results);
                 // If the results are less than the page size, we are done
@@ -214,6 +184,41 @@ namespace Common.Migration
                 }
             }
             return Encoding.UTF8.GetBytes(documentBuilder.ToString());
+        }
+
+        /// <summary>
+        /// Adds a history attachment to the work item using JsonPatchOperation.
+        /// </summary>
+        /// <param name="workItem">The work item.</param>
+        /// <param name="filename">The attachment filename.</param>
+        /// <param name="data">The attachment data.</param>
+        /// <param name="client">The client used to create the attachment on the instance.</param>
+        /// <returns>The necessary patch operations.</returns>
+        private static async Task<IList<JsonPatchOperation>> AddHistoryAttachment(WorkItem workItem, string filename, byte[] data, WorkItemTrackingHttpClient client)
+        {
+            IList<JsonPatchOperation> operations = new List<JsonPatchOperation>();
+            int index = -1;
+            var workItemRelation = workItem.FindAttachment(filename, out index);
+            // Attachment found, is it different
+            if (workItemRelation != null && Convert.ToInt64(workItemRelation.Attributes.GetValue(Constants.RelationAttributeResourceSize, 0)) != data.LongLength)
+            {
+                operations.Add(MigrationHelpers.GetRelationRemoveOperation(index));
+                workItemRelation = null;
+            }
+            // History attachment not found or needs update
+            if (workItemRelation == null)
+            {
+                using (MemoryStream stream = new MemoryStream(data))
+                {
+                    // Upload the attachment
+                    var attachmentReference = await WorkItemTrackingApi.CreateAttachmentAsync(client, stream);
+                    // Create the attachment link
+                    var attachmentLink = new AttachmentLink(filename, attachmentReference, data.LongLength);
+                    // Return the patch operation
+                    operations.Add(MigrationHelpers.GetAttachmentAddOperation(attachmentLink));
+                }
+            }
+            return operations;
         }
     }
 }

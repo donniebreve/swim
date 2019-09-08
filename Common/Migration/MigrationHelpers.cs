@@ -111,10 +111,10 @@ namespace Common.Migration
             return jsonPatchOperation;
         }
 
-        public static JsonPatchOperation GetHyperlinkAddOperation(string hyperlink, string comment)
+        public static JsonPatchOperation GetHyperlinkOperation(Operation operation, string hyperlink, string comment)
         {
             JsonPatchOperation jsonPatchOperation = new JsonPatchOperation();
-            jsonPatchOperation.Operation = Operation.Add;
+            jsonPatchOperation.Operation = operation;
             jsonPatchOperation.Path = $"/{Constants.Relations}/-";
             jsonPatchOperation.Value = new
             {
@@ -125,7 +125,6 @@ namespace Common.Migration
                     comment = comment
                 }
             };
-
             return jsonPatchOperation;
         }
 
@@ -148,7 +147,7 @@ namespace Common.Migration
             return jsonPatchOperation;
         }
 
-        public static JsonPatchOperation GetRevisionHistoryAttachmentAddOperation(AttachmentLink attachmentLink, int workItemId)
+        public static JsonPatchOperation GetAttachmentAddOperation(AttachmentLink attachmentLink)
         {
             JsonPatchOperation jsonPatchOperation = new JsonPatchOperation();
             jsonPatchOperation.Operation = Operation.Add;

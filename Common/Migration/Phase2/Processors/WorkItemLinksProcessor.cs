@@ -22,22 +22,24 @@ namespace Common.Migration
             return configuration.MigrateLinks;
         }
 
-        public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
+        public async Task Preprocess(IContext context, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
         {
             var linkedWorkItemArtifactUrls = new HashSet<string>();
             foreach (WorkItem sourceWorkItem in sourceWorkItems)
             {
-                var relations = GetWorkItemLinkRelations(migrationContext, sourceWorkItem.Relations);
+                var relations = GetWorkItemLinkRelations(context, sourceWorkItem.Relations);
                 var linkedIds = relations.Select(r => ClientHelpers.GetWorkItemIdFromApiEndpoint(r.Url));
-                var uris = linkedIds.Where(id => !migrationContext.SourceToTargetIds.ContainsKey(id)).Select(id => ClientHelpers.GetWorkItemApiEndpoint(migrationContext.Configuration.SourceConnection.Uri, id));
+
+                // To do
+                var uris = linkedIds.Where(id => !((MigrationContext)context).SourceToTargetIds.ContainsKey(id)).Select(id => ClientHelpers.GetWorkItemApiEndpoint(context.Configuration.SourceConnection.Uri, id));
                 linkedWorkItemArtifactUrls.AddRange(uris);
             }
 
-            await linkedWorkItemArtifactUrls.Batch(Constants.BatchSize).ForEachAsync(migrationContext.Configuration.Parallelism, async (workItemArtifactUris, batchId) =>
+            await linkedWorkItemArtifactUrls.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemArtifactUris, batchId) =>
             {
                 Logger.LogTrace(LogDestination.File, $"Finding linked work items on target for batch {batchId}");
 
-                var results = await WorkItemApi.QueryWorkItemsForArtifactUrisAsync(migrationContext.TargetClient.WorkItemTrackingHttpClient, new ArtifactUriQuery { ArtifactUris = workItemArtifactUris });
+                var results = await WorkItemTrackingApi.QueryWorkItemsForArtifactUrisAsync(context.TargetClient.WorkItemTrackingHttpClient, new ArtifactUriQuery { ArtifactUris = workItemArtifactUris });
                 foreach (var result in results.ArtifactUrisQueryResult)
                 {
                     if (result.Value != null)
@@ -47,7 +49,8 @@ namespace Common.Migration
                             var sourceId = ClientHelpers.GetWorkItemIdFromApiEndpoint(result.Key);
                             var targetId = result.Value.First().Id;
 
-                            migrationContext.SourceToTargetIds[sourceId] = targetId;
+                            // To do
+                            ((MigrationContext)context).SourceToTargetIds[sourceId] = targetId;
                         }
                     }
                 }
@@ -56,7 +59,7 @@ namespace Common.Migration
             });
         }
 
-        public async Task<IEnumerable<JsonPatchOperation>> Process(IMigrationContext migrationContext, IBatchMigrationContext batchContext, WorkItem sourceWorkItem, WorkItem targetWorkItem)
+        public async Task<IEnumerable<JsonPatchOperation>> Process(IContext context, WorkItem sourceWorkItem, WorkItem targetWorkItem, object state = null)
         {
             IList<JsonPatchOperation> jsonPatchOperations = new List<JsonPatchOperation>();
 
@@ -65,7 +68,7 @@ namespace Common.Migration
                 return jsonPatchOperations;
             }
 
-            IList<WorkItemRelation> sourceWorkItemLinkRelations = GetWorkItemLinkRelations(migrationContext, sourceWorkItem.Relations);
+            IList<WorkItemRelation> sourceWorkItemLinkRelations = GetWorkItemLinkRelations(context, sourceWorkItem.Relations);
 
             if (sourceWorkItemLinkRelations.Any())
             {
@@ -75,7 +78,7 @@ namespace Common.Migration
                     int targetWorkItemId = targetWorkItem.Id.Value;
                     int linkedTargetId;
 
-                    if (!migrationContext.SourceToTargetIds.TryGetValue(linkedSourceId, out linkedTargetId))
+                    if (!((MigrationContext)context).SourceToTargetIds.TryGetValue(linkedSourceId, out linkedTargetId))
                     {
                         continue;
                     }
@@ -83,7 +86,7 @@ namespace Common.Migration
                     string comment = MigrationHelpers.GetCommentFromAttributes(sourceWorkItemLinkRelation);
                     WorkItemLink newWorkItemLink = new WorkItemLink(linkedTargetId, sourceWorkItemLinkRelation.Rel, false, false, comment, 0);
 
-                    JsonPatchOperation workItemLinkAddOperation = MigrationHelpers.GetWorkItemLinkAddOperation(migrationContext, newWorkItemLink);
+                    JsonPatchOperation workItemLinkAddOperation = MigrationHelpers.GetWorkItemLinkAddOperation(((MigrationContext)context), newWorkItemLink);
                     jsonPatchOperations.Add(workItemLinkAddOperation);
                 }
             }
@@ -91,7 +94,7 @@ namespace Common.Migration
             return jsonPatchOperations;
         }
 
-        private IList<WorkItemRelation> GetWorkItemLinkRelations(IMigrationContext migrationContext, IList<WorkItemRelation> relations)
+        private IList<WorkItemRelation> GetWorkItemLinkRelations(IContext context, IList<WorkItemRelation> relations)
         {
             IList<WorkItemRelation> result = new List<WorkItemRelation>();
 
@@ -102,7 +105,7 @@ namespace Common.Migration
 
             foreach (WorkItemRelation relation in relations)
             {
-                if (IsRelationWorkItemLink(migrationContext, relation))
+                if (IsRelationWorkItemLink(context, relation))
                 {
                     result.Add(relation);
                 }
@@ -111,9 +114,9 @@ namespace Common.Migration
             return result;
         }
 
-        private bool IsRelationWorkItemLink(IMigrationContext migrationContext, WorkItemRelation relation)
+        private bool IsRelationWorkItemLink(IContext context, WorkItemRelation relation)
         {
-            if (migrationContext.ValidatedWorkItemLinkRelationTypes.Contains(relation.Rel))
+            if (((MigrationContext)context).ValidatedWorkItemLinkRelationTypes.Contains(relation.Rel))
             {
                 return true;
             }

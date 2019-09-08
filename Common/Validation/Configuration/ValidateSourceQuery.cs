@@ -20,7 +20,7 @@ namespace Common.Validation
             QueryHierarchyItem query;
             try
             {
-                query = await WorkItemApi.GetQueryAsync(context.SourceClient.WorkItemTrackingHttpClient, context.Configuration.SourceConnection.Project, context.Configuration.Query);
+                query = await WorkItemTrackingApi.GetQueryAsync(context.SourceClient.WorkItemTrackingHttpClient, context.Configuration.SourceConnection.Project, context.Configuration.Query);
             }
             catch (Exception e)
             {

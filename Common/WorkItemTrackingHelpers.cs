@@ -10,19 +10,21 @@ using System.Threading.Tasks;
 using Common.Api;
 using Common.Extensions;
 using Common.Migration;
+using Common.Serialization;
+using Common.Serialization.Json;
 using Logging;
 using Microsoft.Extensions.Logging;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi;
 using Microsoft.TeamFoundation.WorkItemTracking.WebApi.Models;
 using Microsoft.VisualStudio.Services.Common;
 using Microsoft.VisualStudio.Services.WebApi;
-using Newtonsoft.Json;
 
 namespace Common
 {
     public class WorkItemTrackingHelper
     {
         private static ILogger Logger { get; } = MigratorLogging.CreateLogger<WorkItemTrackingHelper>();
+        private static ISerializer _serializer = new JsonSerializer();
 
         public static Task<List<WorkItemField>> GetFields(WorkItemTrackingHttpClient client)
         {
@@ -60,7 +62,7 @@ namespace Common
             // to fallback to the normal upload path.
             if (uploadStream.Length == 0)
             {
-                return await WorkItemApi.CreateAttachmentAsync(client, null);
+                return await WorkItemTrackingApi.CreateAttachmentAsync(client, null);
             }
 
             var requestSettings = new VssHttpRequestSettings
@@ -112,8 +114,11 @@ namespace Common
                     {
                         // there are two formats for the exception, so detect both.
                         var responseContentAsString = await chunkResponse.Content.ReadAsStringAsync();
-                        var criticalException = JsonConvert.DeserializeObject<CriticalExceptionResponse>(responseContentAsString);
-                        var exception = JsonConvert.DeserializeObject<ExceptionResponse>(responseContentAsString);
+
+                        //var criticalException = JsonConvert.DeserializeObject<CriticalExceptionResponse>(responseContentAsString);
+                        //var exception = JsonConvert.DeserializeObject<ExceptionResponse>(responseContentAsString);
+                        var criticalException = _serializer.Deserialize<CriticalExceptionResponse>(responseContentAsString);
+                        var exception = _serializer.Deserialize<ExceptionResponse>(responseContentAsString);
 
                         throw new Exception(criticalException.Value?.Message ?? exception.Message);
                     }
@@ -219,7 +224,7 @@ namespace Common
             var page = 0;
 
             var workItemMigrationStates = new ConcurrentDictionary<int, WorkItemMigrationState>();
-            var queryHierarchyItem = await WorkItemApi.GetQueryAsync(client, project, query);
+            var queryHierarchyItem = await WorkItemTrackingApi.GetQueryAsync(client, project, query);
 
             var baseQuery = ParseQueryForPaging(queryHierarchyItem.Wiql, postMoveTag);
             var wiql = new Wiql() { Query = queryHierarchyItem.Wiql };
@@ -227,59 +232,32 @@ namespace Common
 
             while (true)
             {
-                Logger.LogInformation(LogDestination.File, $"Querying work items for {client.BaseAddress.Host}, page {page++}, last id {lastID}");
                 var pagedWiql = wiql.AddWhereConstraint($"((System.Watermark > {watermark}) OR (System.Watermark = {watermark} AND System.Id > {lastID}))").SetOrderBy("System.Watermark, System.Id");
-                var result = await WorkItemApi.QueryByWiqlAsync(client, pagedWiql, project, queryPageSize);
-                Logger.LogTrace(LogDestination.File, $"The query returned {result.WorkItems.Count()} results");
+                var queryResult = await WorkItemTrackingApi.QueryByWiqlAsync(client, pagedWiql, project, queryPageSize);
 
                 // Check if there were any results
-                if (!result.WorkItems.Any()) break;
+                if (!queryResult.WorkItems.Any()) break;
 
-                foreach (var workItemReference in result.WorkItems)
+                // Get the source work items
+                var workItems = await WorkItemTrackingApi.GetWorkItemsAsync(client, queryResult.WorkItems.Select(item => item.Id), expand: WorkItemExpand.All);
+
+                foreach (var workItemReference in queryResult.WorkItems)
                 {
                     if (!workItemMigrationStates.ContainsKey(workItemReference.Id))
                     {
                         workItemMigrationStates[workItemReference.Id] = new WorkItemMigrationState()
                         {
                             SourceId = workItemReference.Id,
-                            SourceUri = new Uri(RemoveProjectGuidFromUrl(workItemReference.Url)),
+                            SourceUrl = workItemReference.Url,
+                            SourceWorkItem = workItems.FirstOrDefault(item => item.Id.Value == workItemReference.Id),
                             MigrationAction = MigrationAction.Create
                         };
                     }
                     lastID = workItemReference.Id;
+                    watermark = Convert.ToInt32(workItemMigrationStates[workItemReference.Id].SourceWorkItem.Fields[FieldNames.Watermark]);
                 }
-
-                // Get the last work item's watermark
-                var workItem = await WorkItemApi.GetWorkItemAsync(client, lastID, queryFields);
-
-                watermark = Convert.ToInt32(workItem.Fields[FieldNames.Watermark]);
             }
             return workItemMigrationStates;
-        }
-
-        public async static Task GetSourceWorkItemData(IContext context, ISet<string> fields)
-        {
-            // Skip work items that will not be migrated
-            var workItems = context.WorkItemMigrationStates.Where(item => item.MigrationAction != MigrationAction.None);
-            if (!workItems.Any()) return;
-
-            // Gather work item fields
-            var stopwatch = Stopwatch.StartNew();
-            Logger.LogInformation(LogDestination.File, "Querying source to retrieve work item fields");
-            var numberOfBatches = ClientHelpers.GetBatchCount(workItems.Count(), Constants.BatchSize);
-            await workItems.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemMigrationStates, batchId) =>
-            {
-                var results = await WorkItemApi.GetWorkItemsAsync(context.SourceClient.WorkItemTrackingHttpClient, workItemMigrationStates.Select(item => item.SourceId));
-                foreach (var result in results)
-                {
-                    var workItemMigrationState = context.GetWorkItemMigrationState(result.Id.Value);
-                    foreach (var field in fields)
-                    {
-                        workItemMigrationState.GetType().GetProperty(field).SetValue(
-                            workItemMigrationState, result.GetType().GetProperty(field).GetValue(result), null);
-                    }
-                }
-            });
         }
 
         /// <summary>
@@ -290,43 +268,84 @@ namespace Common
         public async static Task IdentifyMigratedWorkItems(IContext context)
         {
             // Skip work items that will not be migrated
-            var workItems = context.WorkItemMigrationStates.Where(item => item.MigrationAction != MigrationAction.None);
-            if (workItems.Any())
+            // To do: look over validation again 
+            //var workItems = context.WorkItemMigrationStates.Where(item => item.MigrationAction != MigrationAction.None);
+
+            // To do: batch this function
+            if (context.WorkItemMigrationStates.Any())
             {
                 var stopwatch = Stopwatch.StartNew();
                 Logger.LogInformation(LogDestination.File, "Querying target to find previously migrated work items");
-                var numberOfBatches = ClientHelpers.GetBatchCount(workItems.Count(), Constants.BatchSize);
-                await workItems.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemMigrationStates, batchId) =>
+                var numberOfBatches = ClientHelpers.GetBatchCount(context.WorkItemMigrationStates.Count(), Constants.BatchSize);
+                await context.WorkItemMigrationStates.Batch(Constants.BatchSize).ForEachAsync(context.Configuration.Parallelism, async (workItemMigrationStates, batchId) =>
                 {
                     Logger.LogInformation(LogDestination.File, $"Batch {batchId} of {numberOfBatches}: Started");
                     var batchStopwatch = Stopwatch.StartNew();
 
                     // Get target work items which contain the source uris in their links section
-                    var sourceUris = workItemMigrationStates.Select(item => item.SourceUri.ToString());
-                    var results = await WorkItemApi.QueryWorkItemsForArtifactUrisAsync(context.TargetClient.WorkItemTrackingHttpClient, new ArtifactUriQuery { ArtifactUris = sourceUris });
+                    var sourceUris = workItemMigrationStates.Select(item => item.SourceUrl);
+                    var queryResults = await WorkItemTrackingApi.QueryWorkItemsForArtifactUrisAsync(context.TargetClient.WorkItemTrackingHttpClient, new ArtifactUriQuery { ArtifactUris = sourceUris });
+
+                    // Get target work items
+                    List<int> targetIDs = new List<int>();
+                    foreach (var workItemReferences in queryResults.ArtifactUrisQueryResult.Values)
+                    {
+                        foreach (var workItemReference in workItemReferences)
+                        {
+                            targetIDs.Add(workItemReference.Id);
+                        }
+                    }
+                    if (targetIDs.Count <= 0)
+                    {
+                        // No existing items
+                        return;
+                    }
+                    var targetWorkItems = await WorkItemTrackingApi.GetWorkItemsAsync(context.TargetClient.WorkItemTrackingHttpClient, targetIDs, expand: WorkItemExpand.All);
 
                     // See if source work items exist in the target and update the migration action
-                    foreach (var workItem in workItemMigrationStates)
+                    foreach (var workItemMigrationState in workItemMigrationStates)
                     {
                         try
                         {
-                            var workItemReferences = results.ArtifactUrisQueryResult[workItem.SourceUri.ToString()];
+                            var workItemReferences = queryResults.ArtifactUrisQueryResult[workItemMigrationState.SourceUrl];
                             if (workItemReferences.Count() > 1)
                             {
-                                throw new Exception($"Found more than one work item with artifact link {workItem.SourceUri} in the target.");
+                                throw new Exception($"Found more than one work item with artifact link {workItemMigrationState.SourceUrl} in the target.");
+                            }
+                            if (workItemReferences.Count() == 0)
+                            {
+                                workItemMigrationState.MigrationAction = MigrationAction.Create;
                             }
                             if (workItemReferences.Count() == 1)
                             {
-                                // To do: Move reading the revision here and detecting updates
-                                workItem.MigrationAction = MigrationAction.Update;
-                                workItem.TargetId = workItemReferences.First().Id;
-                                workItem.TargetUri = new Uri(workItemReferences.First().Url);
+                                var workItemReference = workItemReferences.First();
+                                workItemMigrationState.TargetId = workItemReference.Id;
+                                workItemMigrationState.TargetUrl = workItemReference.Url;
+                                workItemMigrationState.TargetWorkItem = targetWorkItems.First(item => item.Id.Value == workItemReference.Id);
+                                workItemMigrationState.MigrationAction = MigrationAction.None;
+                                if (context.Configuration.OverwriteExistingWorkItems)
+                                {
+                                    workItemMigrationState.MigrationAction = MigrationAction.Update;
+                                }
+                                else if (context.Configuration.UpdateModifiedWorkItems)
+                                {
+                                    // Get the stored source revision
+                                    var workItemRelation = workItemMigrationState.TargetWorkItem.FindHyperlink(workItemMigrationState.SourceUrl);
+                                    if (workItemRelation != null)
+                                    {
+                                        var sourceHyperlinkComment = _serializer.Deserialize<SourceHyperlinkComment>((string)workItemRelation.Attributes.GetValue(Constants.RelationAttributeComment));
+                                        if (sourceHyperlinkComment.SourceRev != workItemMigrationState.SourceWorkItem.Rev)
+                                        {
+                                            workItemMigrationState.MigrationAction = MigrationAction.Update;
+                                        }
+                                    }
+                                }
                             }
                         }
                         catch (Exception e)
                         {
-                            workItem.MigrationAction = MigrationAction.None;
-                            workItem.FailureReason |= FailureReason.DuplicateSourceLinksOnTarget;
+                            workItemMigrationState.MigrationAction = MigrationAction.None;
+                            workItemMigrationState.AddFailureReason(FailureReason.DuplicateSourceLinksOnTarget);
                             Logger.LogError(LogDestination.File, e, e.Message);
                         }
                     }

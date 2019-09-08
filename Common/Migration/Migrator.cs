@@ -47,7 +47,9 @@ namespace Common.Migration
             {
                 Logger.LogInformation(LogDestination.File, $"Starting migration phase for: {processor.Name}");
                 stopwatch.Start();
+
                 await processor.Process(this._context);
+
                 stopwatch.Reset();
                 Logger.LogInformation(LogDestination.File, $"Completed migration phase for: {processor.Name} in {stopwatch.Elapsed.TotalSeconds}s");
             }
@@ -56,8 +58,9 @@ namespace Common.Migration
 
         private async Task MigratePhase2()
         {
-            Logger.LogInformation("Starting migration phase 2");
+            Logger.LogInformation("Phase 2: Start");
 
+            // Gather the list of work items
             IList<WorkItemMigrationState> workItems = new List<WorkItemMigrationState>();
             if (_context.Configuration.CreateNewWorkItems)
             {
@@ -68,44 +71,91 @@ namespace Common.Migration
                 // To do: figure out why he wanted to only update items with the RequirementForExisting.UpdatePhase2
                 workItems.AddRange(_context.WorkItemMigrationStates.Where(item => item.MigrationAction == MigrationAction.Update));
             }
-
-            var phase2WorkItemsToUpdateCount = workItems.Count();
-            var totalNumberOfBatches = ClientHelpers.GetBatchCount(phase2WorkItemsToUpdateCount, Constants.BatchSize);
-
-            if (phase2WorkItemsToUpdateCount == 0)
+            if (workItems.Count == 0)
             {
                 Logger.LogInformation(LogDestination.File, "No work items to process for phase 2");
                 return;
             }
 
-            await workItems.Batch(Constants.BatchSize).ForEachAsync(_context.Configuration.Parallelism, async (workItemMigrationStateBatch, batchId) =>
+            // Instantiate the phase 2 processors
+            var phase2Processors = ClientHelpers.GetProcessorInstances<IPhase2Processor>(_context.Configuration);
+
+            // Process the work items in batches
+            var totalNumberOfBatches = Math.Ceiling(workItems.Count / (decimal)Constants.BatchSize);
+            await workItems.Batch(Constants.BatchSize).ForEachAsync(_context.Configuration.Parallelism, async (workItemMigrationStates, batchId) =>
             {
-                Logger.LogTrace(LogDestination.File, $"Reading Phase 2 source and target work items for batch {batchId} of {totalNumberOfBatches}");
-                // make web call to get source and target work items
-                IList<WorkItem> sourceWorkItemsInBatch = await WorkItemApi.GetWorkItemsAsync(_context.SourceClient.WorkItemTrackingHttpClient, workItemMigrationStateBatch.Select(a => a.SourceId).ToList(), expand: WorkItemExpand.All);
-                IList<WorkItem> targetWorkItemsInBatch = await WorkItemApi.GetWorkItemsAsync(_context.TargetClient.WorkItemTrackingHttpClient, workItemMigrationStateBatch.Select(a => a.TargetId.Value).ToList(), expand: WorkItemExpand.Relations);
+                Logger.LogTrace(LogDestination.File, $"Phase 2: Reading source and target work items for batch {batchId} of {totalNumberOfBatches}");
 
-                IBatchMigrationContext batchContext = new BatchMigrationContext(batchId, workItemMigrationStateBatch);
-                batchContext.SourceWorkItemIdToTargetWorkItemIdMapping = workItemMigrationStateBatch.ToDictionary(key => key.SourceId, value => value.TargetId.Value);
+                //IList<WorkItem> sourceWorkItems = await WorkItemTrackingApi.GetWorkItemsAsync(this._context.SourceClient.WorkItemTrackingHttpClient, workItemMigrationStates.Select(a => a.SourceId), expand: WorkItemExpand.All);
+                //IList<WorkItem> targetWorkItems = await WorkItemTrackingApi.GetWorkItemsAsync(this._context.TargetClient.WorkItemTrackingHttpClient, workItemMigrationStates.Select(a => a.TargetId.Value), expand: WorkItemExpand.Relations);
 
-                foreach (var sourceWorkItem in sourceWorkItemsInBatch)
+                IList<int> sourceIDs = workItemMigrationStates.Select(item => item.SourceId).ToList();
+                IList<int> targetIDs = workItemMigrationStates.Select(item => item.TargetId.Value).ToList();
+                IList<WorkItem> sourceWorkItems = workItemMigrationStates.Select(item => item.SourceWorkItem).ToList();
+                IList<WorkItem> targetWorkItems = workItemMigrationStates.Select(item => item.TargetWorkItem).ToList();
+
+                //IBatchMigrationContext batchContext = new BatchMigrationContext(batchId, workItemMigrationStateBatch);
+                //batchContext.SourceWorkItemIdToTargetWorkItemIdMapping = workItemMigrationStateBatch.ToDictionary(key => key.SourceId, value => value.TargetId.Value);
+
+                //foreach (var workItem in sourceWorkItems)
+                //{
+                //    int targetId = Migrator.GetTargetId(sourceWorkItem.Id.Value, workItemMigrationStateBatch);
+                //    batchContext.TargetIdToSourceWorkItemMapping.Add(targetId, sourceWorkItem);
+                //}
+
+                //Logger.LogTrace(LogDestination.File, $"Generating Phase 2 json patch operations for batch {batchId} of {totalNumberOfBatches}");
+                //var sourceIdToWitBatchRequests = await GenerateWitBatchRequestsForPhase2Batch(batchContext, batchId, workItemMigrationStateBatch, sourceWorkItemsInBatch, targetWorkItemsInBatch);
+
+                //IList<(int SourceId, WitBatchRequest WitBatchRequest)> result = new List<(int SourceId, WitBatchRequest WitBatchRequest)>();
+
+                foreach (IPhase2Processor processor in phase2Processors)
                 {
-                    int targetId = Migrator.GetTargetId(sourceWorkItem.Id.Value, workItemMigrationStateBatch);
-                    batchContext.TargetIdToSourceWorkItemMapping.Add(targetId, sourceWorkItem);
+                    // There are no preprocessors??? What is this
+                    // The only preprocessor is in WorkItemLinksProcessor
+                    await processor.Preprocess(_context, sourceWorkItems, targetWorkItems);
                 }
 
-                Logger.LogTrace(LogDestination.File, $"Generating Phase 2 json patch operations for batch {batchId} of {totalNumberOfBatches}");
-                var sourceIdToWitBatchRequests = await GenerateWitBatchRequestsForPhase2Batch(batchContext, batchId, workItemMigrationStateBatch, sourceWorkItemsInBatch, targetWorkItemsInBatch);
+                IList<WitBatchRequest> witBatchRequests = new List<WitBatchRequest>();
+                //foreach (var sourceToTarget in batchContext.SourceWorkItemIdToTargetWorkItemIdMapping)
+                foreach (var workItemMigrationState in workItemMigrationStates)
+                {
+                    int sourceId = workItemMigrationState.SourceId;
+                    int targetId = workItemMigrationState.TargetId.Value;
 
-                Logger.LogTrace(LogDestination.File, $"Saving Phase 2 json patch operations for batch {batchId} of {totalNumberOfBatches}");
+                    WorkItem sourceWorkItem = sourceWorkItems.First(a => a.Id == sourceId);
+                    WorkItem targetWorkItem = targetWorkItems.First(a => a.Id == targetId);
 
-                var phase2ApiWrapper = new Phase2ApiWrapper();
-                await phase2ApiWrapper.ExecuteWitBatchRequests(sourceIdToWitBatchRequests, _context, batchContext);
+                    IList<JsonPatchOperation> patchOperations = new List<JsonPatchOperation>();
 
-                Logger.LogTrace(LogDestination.File, $"Completed Phase 2 for batch {batchId} of {totalNumberOfBatches}");
+                    // What is this?
+                    //workItemMigrationState.RevAndPhaseStatus = GetRevAndPhaseStatus(targetWorkItem, sourceId);
+
+                    // Gathers all the names of the processors, to add to the hyperlink comment (what for?)
+                    //ISet<string> enabledPhaseStatuses = System.Linq.Enumerable.ToHashSet(phase2Processors.Where(a => a.IsEnabled(_context.Configuration)).Select(b => b.Name));
+                    //enabledPhaseStatuses.Remove(Constants.RelationPhaseClearAllRelations);
+
+                    foreach (IPhase2Processor processor in phase2Processors)
+                    {
+                        var operations = await processor.Process(_context, sourceWorkItem, targetWorkItem);
+                        patchOperations.AddRange(operations);
+                    }
+
+                    // Create the WitBatchRequest
+                    if (patchOperations.Count > 0)
+                    {
+                        // The WitBatchRequest functionality does not return the appropriate number of responses
+                        //WitBatchRequest witBatchRequest = GenerateWitBatchRequestFromJsonPatchOperations(patchOperations, targetId);
+                        //witBatchRequests.Add(witBatchRequest);
+
+                        await WorkItemTrackingApi.UpdateWorkItemAsync(_context.TargetClient.WorkItemTrackingHttpClient, patchOperations, targetId);
+                    }
+                }
+
+                //var phase2ApiWrapper = new Phase2ApiWrapper();
+                //await phase2ApiWrapper.ExecuteWitBatchRequests(sourceIdToWitBatchRequests, _context, batchContext);
             });
 
-            Logger.LogInformation("Completed migration phase 2");
+            Logger.LogInformation("Phase 2: Complete");
         }
 
         private async Task MigratePhase3()
@@ -131,7 +181,7 @@ namespace Common.Migration
             {
                 IBatchMigrationContext batchContext = new BatchMigrationContext(batchId, workItemMigrationStateBatch);
                 IList<(int SourceId, WitBatchRequest WitBatchRequest)> sourceIdToWitBatchRequests = new List<(int SourceId, WitBatchRequest WitBatchRequest)>();
-                IList<WorkItem> sourceWorkItemsInBatch = await WorkItemApi.GetWorkItemsAsync(_context.SourceClient.WorkItemTrackingHttpClient, workItemMigrationStateBatch.Select(a => a.SourceId).ToList(), expand: WorkItemExpand.All);
+                IList<WorkItem> sourceWorkItemsInBatch = await WorkItemTrackingApi.GetWorkItemsAsync(_context.SourceClient.WorkItemTrackingHttpClient, workItemMigrationStateBatch.Select(a => a.SourceId).ToList(), expand: WorkItemExpand.All);
 
                 foreach (WorkItem sourceWorkItem in sourceWorkItemsInBatch)
                 {
@@ -183,7 +233,7 @@ namespace Common.Migration
             foreach (IPhase2Processor processor in phase2Processors)
             {
                 Logger.LogInformation(LogDestination.File, $"Starting preprocessing of phase 2 step {processor.Name} for batch {batchId}");
-                await processor.Preprocess(_context, batchContext, sourceWorkItems, targetWorkItems);
+                await processor.Preprocess(_context, sourceWorkItems, targetWorkItems);
                 Logger.LogInformation(LogDestination.File, $"Completed preprocessing of phase 2 step {processor.Name} for batch {batchId}");
             }
 
@@ -198,17 +248,18 @@ namespace Common.Migration
                 IList<JsonPatchOperation> jsonPatchOperations = new List<JsonPatchOperation>();
 
                 WorkItemMigrationState state = workItemMigrationState.First(a => a.SourceId == sourceId);
-                state.RevAndPhaseStatus = GetRevAndPhaseStatus(targetWorkItem, sourceId);
+                //state.RevAndPhaseStatus = GetRevAndPhaseStatus(targetWorkItem, sourceId);
                 ISet<string> enabledPhaseStatuses = System.Linq.Enumerable.ToHashSet(phase2Processors.Where(a => a.IsEnabled(_context.Configuration)).Select(b => b.Name));
                 enabledPhaseStatuses.Remove(Constants.RelationPhaseClearAllRelations);
 
                 foreach (IPhase2Processor processor in phase2Processors)
                 {
-                    IEnumerable<JsonPatchOperation> processorJsonPatchOperations = await processor.Process(_context, batchContext, sourceWorkItem, targetWorkItem);
+                    IEnumerable<JsonPatchOperation> processorJsonPatchOperations = await processor.Process(_context, sourceWorkItem, targetWorkItem);
                     jsonPatchOperations.AddRange(processorJsonPatchOperations);
                 }
 
-                jsonPatchOperations.Add(GetAddHyperlinkWithCommentOperation(targetWorkItems, state, sourceId, targetId, sourceWorkItem, enabledPhaseStatuses));
+                // To do
+                //jsonPatchOperations.Add(GetAddHyperlinkWithCommentOperation(targetWorkItems, state, sourceId, targetId, sourceWorkItem, enabledPhaseStatuses));
 
                 if (jsonPatchOperations.Any())
                 {
@@ -218,36 +269,6 @@ namespace Common.Migration
             }
 
             return result;
-        }
-
-        private JsonPatchOperation GetAddHyperlinkWithCommentOperation(IList<WorkItem> targetWorkItems, WorkItemMigrationState state, int sourceId, int targetId, WorkItem sourceWorkItem, ISet<string> enabledPhaseStatuses)
-        {
-            IList<WorkItemRelation> targetRelations = targetWorkItems.First(a => a.Id == targetId).Relations;
-
-            foreach (WorkItemRelation targetRelation in targetRelations)
-            {
-                if (RelationHelpers.IsRelationHyperlinkToSourceWorkItem(_context, targetRelation, sourceId))
-                {
-                    // only store the enabled phase statuses
-                    RevAndPhaseStatus newRevAndPhaseStatus = new RevAndPhaseStatus();
-                    newRevAndPhaseStatus.Rev = sourceWorkItem.Rev.Value;
-                    newRevAndPhaseStatus.PhaseStatus = enabledPhaseStatuses;
-                    state.RevAndPhaseStatus = newRevAndPhaseStatus;
-
-                    // get the key even if its letter case is different but it matches otherwise
-                    string idKeyFromFields = targetRelation.Attributes.GetKeyIgnoringCase(Constants.RelationAttributeId);
-                    object attributeId = targetRelation.Attributes[idKeyFromFields];
-
-                    JsonPatchOperation addHyperlinkWithCommentOperation = MigrationHelpers.GetHyperlinkAddOperation(
-                        state.SourceUri.ToString(),
-                        newRevAndPhaseStatus.GetCommentRepresentation(),
-                        attributeId);
-
-                    return addHyperlinkWithCommentOperation;
-                }
-            }
-
-            throw new Exception($"Could not find hyperlink to source work item on target work item with id: {targetId}. Expected source work item id: {sourceId}");
         }
 
         private RevAndPhaseStatus GetRevAndPhaseStatus(WorkItem targetWorkItem, int sourceWorkItemId)
@@ -337,7 +358,7 @@ namespace Common.Migration
         /// <returns></returns>
         public static async Task ReadSourceWorkItems(IMigrationContext migrationContext, IEnumerable<int> workItemIds, IBatchMigrationContext batchContext, WorkItemExpand? expand = WorkItemExpand.All)
         {
-            batchContext.SourceWorkItems = await WorkItemApi.GetWorkItemsAsync(migrationContext.SourceClient.WorkItemTrackingHttpClient, workItemIds, expand: expand);
+            batchContext.SourceWorkItems = await WorkItemTrackingApi.GetWorkItemsAsync(migrationContext.SourceClient.WorkItemTrackingHttpClient, workItemIds, expand: expand);
         }
 
         public static int GetTargetId(int sourceId, IEnumerable<WorkItemMigrationState> workItemMigrationStates)

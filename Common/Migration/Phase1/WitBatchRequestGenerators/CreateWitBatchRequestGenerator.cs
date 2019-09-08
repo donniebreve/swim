@@ -6,6 +6,7 @@ using Microsoft.VisualStudio.Services.WebApi.Patch.Json;
 using Newtonsoft.Json;
 using Common.ApiWrappers;
 using Logging;
+using Microsoft.VisualStudio.Services.WebApi.Patch;
 
 namespace Common.Migration
 {
@@ -37,6 +38,8 @@ namespace Common.Migration
             }
 
             var phase1ApiWrapper = new Phase1ApiWrapper();
+
+            // Go to BaseBatchAPiWrapper
             await phase1ApiWrapper.ExecuteWitBatchRequests(sourceIdToWitBatchRequests, this.migrationContext, batchContext, verifyOnFailure: true);
         }
 
@@ -45,19 +48,25 @@ namespace Common.Migration
             Dictionary<string, string> headers = new Dictionary<string, string>();
             headers.Add("Content-Type", "application/json-patch+json");
 
-            JsonPatchDocument jsonPatchDocument = CreateJsonPatchDocumentFromWorkItemFields(sourceWorkItem);
+            JsonPatchDocument patchDocument = CreateJsonPatchDocumentFromWorkItemFields(sourceWorkItem);
 
             JsonPatchOperation insertIdAddOperation = GetInsertBatchIdAddOperation();
-            jsonPatchDocument.Add(insertIdAddOperation);
+            patchDocument.Add(insertIdAddOperation);
 
             // add hyperlink to source WorkItem
-            string sourceWorkItemApiEndpoint = ClientHelpers.GetWorkItemApiEndpoint(this.migrationContext.Configuration.SourceConnection.Uri, sourceWorkItem.Id.Value);
-            JsonPatchOperation addHyperlinkAddOperation = MigrationHelpers.GetHyperlinkAddOperation(sourceWorkItemApiEndpoint, sourceWorkItem.Rev.ToString());
-            jsonPatchDocument.Add(addHyperlinkAddOperation);
+            //string sourceWorkItemApiEndpoint = ClientHelpers.GetWorkItemApiEndpoint(this.migrationContext.Configuration.SourceConnection.Uri, sourceWorkItem.Id.Value);
+            //JsonPatchOperation addHyperlinkAddOperation = MigrationHelpers.GetHyperlinkOperation(Operation.Add, sourceWorkItemApiEndpoint, sourceWorkItem.Rev.ToString());
+            //jsonPatchDocument.Add(addHyperlinkAddOperation);
+            var sourceHyperlinkComment = new SourceHyperlinkComment(sourceWorkItem.Rev.Value);
+            patchDocument.Add(
+                MigrationHelpers.GetHyperlinkOperation(
+                    Operation.Add,
+                    sourceWorkItem.Url,
+                    JsonConvert.SerializeObject(sourceHyperlinkComment)));
 
-            string json = JsonConvert.SerializeObject(jsonPatchDocument);
+            string json = JsonConvert.SerializeObject(patchDocument);
 
-            string workItemType = jsonPatchDocument.Find(a => a.Path.Contains(FieldNames.WorkItemType)).Value as string;
+            string workItemType = patchDocument.Find(a => a.Path.Contains(FieldNames.WorkItemType)).Value as string;
 
             var witBatchRequest = new WitBatchRequest();
             witBatchRequest.Method = "PATCH";

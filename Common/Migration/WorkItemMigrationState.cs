@@ -6,11 +6,12 @@ namespace Common.Migration
     public class WorkItemMigrationState
     {
         public int SourceId { get; set; }
-        public Uri SourceUri { get; set; }
-        public int SourceRevision { get; set; }
+        public string SourceUrl { get; set; }
+        public WorkItem SourceWorkItem { get; set; }
 
         public int? TargetId { get; set; }
-        public Uri TargetUri { get; set; }
+        public string TargetUrl { get; set; }
+        public WorkItem TargetWorkItem { get; set; }
 
         public MigrationAction MigrationAction { get; set; }
 
@@ -32,6 +33,5 @@ namespace Common.Migration
         public enum RequirementForExisting { None, UpdatePhase1, UpdatePhase2 }
         [Flags]
         public enum MigrationCompletionStatus { None, Phase1, Phase2, Phase3 }
-        public RevAndPhaseStatus RevAndPhaseStatus { get; set; }
     }
 }

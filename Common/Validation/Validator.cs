@@ -137,7 +137,7 @@ namespace Common.Validation
                 {
                     Logger.LogInformation(LogDestination.File, $"Work item metadata validation batch {batchId} of {totalNumberOfBatches}: Starting");
                     var stopwatch = Stopwatch.StartNew();
-                    var workItems = await WorkItemApi.GetWorkItemsAsync(
+                    var workItems = await WorkItemTrackingApi.GetWorkItemsAsync(
                         this._context.SourceClient.WorkItemTrackingHttpClient,
                         workItemIds,
                         this._context.RequestedFields);

@@ -26,7 +26,7 @@ namespace Common.Validation.Configuration
                 .ForEachAsync(context.Configuration.Parallelism,
                     async (batch, batchId) =>
                     {
-                        IList<WorkItem> workItems = await WorkItemApi.GetWorkItemsAsync(context.SourceClient.WorkItemTrackingHttpClient, batch.Select(item => item.SourceId).ToList());
+                        IList<WorkItem> workItems = await WorkItemTrackingApi.GetWorkItemsAsync(context.SourceClient.WorkItemTrackingHttpClient, batch.Select(item => item.SourceId).ToList());
                         foreach (var workItem in workItems)
                         {
                             foreach (var field in workItem.Fields)

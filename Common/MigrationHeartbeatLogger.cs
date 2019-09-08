@@ -36,7 +36,7 @@ namespace Common
             string line6 = $"work items that failed phase 2 migration:    {GetFailedPhase2WorkItemsCount()}";
             string line7 = $"work items to be processed in phase 2:       {GetPhase2Total()}";
 
-            Logger.LogInformation($"{line1}{Environment.NewLine}{line2}{Environment.NewLine}{line3}{Environment.NewLine}{line4}{Environment.NewLine}{line5}{Environment.NewLine}{line6}{Environment.NewLine}{line7}");
+            Logger.LogInformation(LogDestination.Console, $"{line1}{Environment.NewLine}{line2}{Environment.NewLine}{line3}{Environment.NewLine}{line4}{Environment.NewLine}{line5}{Environment.NewLine}{line6}{Environment.NewLine}{line7}");
         }
 
         public void Dispose()

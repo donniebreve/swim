@@ -27,6 +27,7 @@ namespace Common.ApiWrappers
                 Logger.LogError(LogDestination.File, $"Exception in MakeRequest {e.Message}");
                 throw e;
                 //we continue migration even if something failed 
+                // How? you threw the exception (in poor fashion as well)
             }
         }
 
@@ -118,8 +119,8 @@ namespace Common.ApiWrappers
                 Logger.LogInformation(LogDestination.File, $"Checking if exception for {requestId} resulted in work items being migrated.");
 
                 //var artifactUris = migrationContext.WorkItemIdsUris.Where(w => sourceIds.Contains(w.Key)).Select(w => w.Value);
-                var sourceUris = context.WorkItemMigrationStates.Where(item => sourceIds.Contains(item.SourceId)).Select(item => item.SourceUri.ToString());
-                var result = await WorkItemApi.QueryWorkItemsForArtifactUrisAsync(context.TargetClient.WorkItemTrackingHttpClient, new ArtifactUriQuery { ArtifactUris = sourceUris });
+                var sourceUris = context.WorkItemMigrationStates.Where(item => sourceIds.Contains(item.SourceId)).Select(item => item.SourceUrl);
+                var result = await WorkItemTrackingApi.QueryWorkItemsForArtifactUrisAsync(context.TargetClient.WorkItemTrackingHttpClient, new ArtifactUriQuery { ArtifactUris = sourceUris });
 
                 // To do
                 var anyWorkItemsCreated = false;

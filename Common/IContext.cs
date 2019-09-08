@@ -41,6 +41,13 @@ namespace Common
         /// <returns>A WorkItemMigrationState, or null.</returns>
         WorkItemMigrationState GetWorkItemMigrationState(int sourceID);
 
+        /// <summary>
+        /// Returns the WorkItemMigrationState for the given target work item ID.
+        /// </summary>
+        /// <param name="targetID">The target work item ID.</param>
+        /// <returns>A WorkItemMigrationState, or null.</returns>
+        WorkItemMigrationState GetWorkItemMigrationStateByTargetID(int targetID);
+
         //remote relation types, do not need to exist on target since they're 
         //recreated as hyperlinks
         ConcurrentSet<string> RemoteLinkRelationTypes { get; set; }

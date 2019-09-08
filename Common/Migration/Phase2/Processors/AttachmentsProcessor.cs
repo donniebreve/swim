@@ -37,31 +37,15 @@ namespace Common.Migration
             return configuration.MigrateAttachments;
         }
 
-        /// <summary>
-        /// Performs work necessary prior to processing the work item batch.
-        /// </summary>
-        /// <param name="migrationContext">The migration context.</param>
-        /// <param name="batchContext">The batch context.</param>
-        /// <param name="sourceWorkItems">The list of source work items.</param>
-        /// <param name="targetWorkItems">The list of target work items.</param>
-        /// <returns>An awaitable Task.</returns>
-        public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
+        public async Task Preprocess(IContext context, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
         {
             // Nothing required
         }
 
-        /// <summary>
-        /// Process the work item batch.
-        /// </summary>
-        /// <param name="context">The migration context.</param>
-        /// <param name="batchContext">The batch context.</param>
-        /// <param name="sourceWorkItem">The source work item.</param>
-        /// <param name="targetWorkItem">The target work item.</param>
-        /// <returns>A enumerable of JsonPatchOperations.</returns>
-        public async Task<IEnumerable<JsonPatchOperation>> Process(IMigrationContext context, IBatchMigrationContext batchContext, WorkItem sourceWorkItem, WorkItem targetWorkItem)
+        public async Task<IEnumerable<JsonPatchOperation>> Process(IContext context, WorkItem sourceWorkItem, WorkItem targetWorkItem, object state = null)
         {
             IList<JsonPatchOperation> jsonPatchOperations = new List<JsonPatchOperation>();
-            if (sourceWorkItem.Relations == null)
+            if (sourceWorkItem == null || sourceWorkItem.Relations == null)
             {
                 // If the source work item has no attachments, simply return
                 return jsonPatchOperations;
@@ -93,11 +77,10 @@ namespace Common.Migration
                             workItemRelation.Attributes[Constants.RelationAttributeComment] = attachmentLink.Comment;
                         if (relation.Attributes.ContainsKey(Constants.RelationAttributeComment))
                             workItemRelation.Attributes[Constants.RelationAttributeComment] = relation.Attributes[Constants.RelationAttributeComment];
+                        // Generate the patch operation
+                        jsonPatchOperations.Add(MigrationHelpers.GetRelationAddOperation(workItemRelation));
                     }
                 }
-                // Generate the patch operation
-                JsonPatchOperation attachmentAddOperation = MigrationHelpers.GetRelationAddOperation(attachment);
-                jsonPatchOperations.Add(attachmentAddOperation);
             }
             return jsonPatchOperations;
         }
@@ -109,7 +92,7 @@ namespace Common.Migration
         /// <param name="workItem">The source work item.</param>
         /// <param name="relation">The attachment realtion.</param>
         /// <returns>An AttachmentLink referencing the attachment in the target instance.</returns>
-        private async Task<AttachmentLink> MigrateAttachment(IMigrationContext context, WorkItem workItem, WorkItemRelation relation)
+        private async Task<AttachmentLink> MigrateAttachment(IContext context, WorkItem workItem, WorkItemRelation relation)
         {
             // Only process attachments
             if (!relation.IsAttachment())
@@ -141,7 +124,7 @@ namespace Common.Migration
                 {
                     // Download the attachment
                     Logger.LogInformation(LogDestination.File, $"Downloading attachment {filename} from source work item {workItem.Id}.");
-                    await (await WorkItemApi.GetAttachmentAsync(context.SourceClient.WorkItemTrackingHttpClient, attachmentGuid)).CopyToAsync(stream);
+                    await (await WorkItemTrackingApi.GetAttachmentAsync(context.SourceClient.WorkItemTrackingHttpClient, attachmentGuid)).CopyToAsync(stream);
                 }
                 catch (Exception e)
                 {
@@ -155,7 +138,7 @@ namespace Common.Migration
                 {
                     // Upload the attachment
                     Logger.LogTrace(LogDestination.File, $"Uploading attachment {filename} from source work item {workItem.Id}");
-                    var attachmentReference = await WorkItemApi.CreateAttachmentAsync(context.TargetClient.WorkItemTrackingHttpClient, stream);
+                    var attachmentReference = await WorkItemTrackingApi.CreateAttachmentAsync(context.TargetClient.WorkItemTrackingHttpClient, stream);
                     // To do: reimplement the chunked upload
                     //await WorkItemTrackingHelper.CreateAttachmentChunkedAsync(context.TargetClient.WorkItemTrackingHttpClient, context.TargetClient.Connection, stream, context.Configuration.AttachmentUploadChunkSize);
                     return new AttachmentLink(filename, attachmentReference, resourceSize, comment);

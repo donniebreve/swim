@@ -59,6 +59,8 @@ namespace Common.ApiWrappers
                 Logger.LogError(LogDestination.All, e, $"Exception caught while calling ExecuteWitBatchRequests() in batch with batchId {batchContext.BatchId}:");
             }
 
+            // This seems like a good idea, but the ExecuteBatchRequest method does not return the same number of responses as requests, and the responses contain no identifying information
+            // Mapping a reponse back to a request does not seem like it is possible at this time
             HandleBatchResponses(sourceIdToWitBatchRequests, witBatchResponses, migrationContext, batchContext);
         }
 
@@ -89,6 +91,11 @@ namespace Common.ApiWrappers
                 ApiWrapperHelpers.HandleCriticalError(witBatchResponses.First(), sourceIdToWitBatchRequests.Select(r => r.SourceId), batchContext);
                 statusCode = 500;
             }
+            // The number of responses has to match...
+            else if (witBatchResponses.Count != sourceIdToWitBatchRequests.Count)
+            {
+                throw new Exception("The number of WitBatchResponses does not match the number of WitBatchRequests sent.");
+            }
             // All is good, we got the expected number of responses, process accordingly
             else
             {
@@ -104,9 +111,17 @@ namespace Common.ApiWrappers
                     switch ((HttpStatusCode)statusCodeForWorkItem)
                     {
                         case HttpStatusCode.OK:
-                            WorkItem workItem = witBatchResponses[i].ParseBody<WorkItem>();
-                            UpdateWorkItemMigrationStatus(batchContext, sourceId, workItem);
-                            break;
+                            {
+                                // Deserialize the reponse
+                                WorkItem workItem = witBatchResponses[i].ParseBody<WorkItem>();
+                                // Get the migration state
+                                var workItemMigrationState = migrationContext.GetWorkItemMigrationState(sourceId);
+                                // Update the target work item
+                                workItemMigrationState.TargetId = workItem.Id.Value;
+                                workItemMigrationState.TargetUrl = workItem.Url;
+                                workItemMigrationState.TargetWorkItem = workItem;
+                                break;
+                            }
                         case HttpStatusCode.BadRequest:
                             SaveFailureStatusInWorkItemsMigrationState(batchContext, sourceId, FailureReason.BadRequest);
                             ApiWrapperHelpers.HandleUnsuccessfulWitBatchResponse(witBatchResponses[i], sourceIdToWitBatchRequests[i], batchContext, statusCodeForWorkItem, FailureReason.BadRequest);
@@ -131,10 +146,10 @@ namespace Common.ApiWrappers
         {
             WorkItemMigrationState state = batchContext.WorkItemMigrationState.First(a => a.SourceId == sourceWorkItemId);
             state.FailureReason |= failureReason;
-            if (state.RevAndPhaseStatus != null && state.RevAndPhaseStatus.PhaseStatus != null)
-            {
-                state.RevAndPhaseStatus.PhaseStatus.Clear();
-            }
+            //if (state.RevAndPhaseStatus != null && state.RevAndPhaseStatus.PhaseStatus != null)
+            //{
+            //    state.RevAndPhaseStatus.PhaseStatus.Clear();
+            //}
         }
     }
 }

@@ -21,15 +21,15 @@ namespace Common.Migration
             return configuration.MigrateLinks;
         }
 
-        public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
+        public async Task Preprocess(IContext context, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
         {
 
         }
 
-        public async Task<IEnumerable<JsonPatchOperation>> Process(IMigrationContext migrationContext, IBatchMigrationContext batchContext, WorkItem sourceWorkItem, WorkItem targetWorkItem)
+        public async Task<IEnumerable<JsonPatchOperation>> Process(IContext context, WorkItem sourceWorkItem, WorkItem targetWorkItem, object state = null)
         {
             IList<JsonPatchOperation> jsonPatchOperations = new List<JsonPatchOperation>();
-            IEnumerable<WorkItemRelation> sourceRemoteLinks = sourceWorkItem.Relations?.Where(r => RelationHelpers.IsRemoteLinkType(migrationContext, r.Rel));
+            IEnumerable<WorkItemRelation> sourceRemoteLinks = sourceWorkItem.Relations?.Where(r => RelationHelpers.IsRemoteLinkType(context, r.Rel));
 
             if (sourceRemoteLinks != null && sourceRemoteLinks.Any())
             {

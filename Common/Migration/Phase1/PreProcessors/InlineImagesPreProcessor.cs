@@ -116,7 +116,7 @@ namespace Common.Migration
             try
             {
                 Logger.LogTrace(LogDestination.File, $"Reading inline image {inlineImageUrl} for source work item {sourceWorkItemId} from the source account");
-                stream = await WorkItemApi.GetAttachmentAsync(this.context.SourceClient.WorkItemTrackingHttpClient, sourceGuid);
+                stream = await WorkItemTrackingApi.GetAttachmentAsync(this.context.SourceClient.WorkItemTrackingHttpClient, sourceGuid);
                 Logger.LogTrace(LogDestination.File, $"Completed reading inline image {inlineImageUrl} for source work item {sourceWorkItemId} from the source account");
             }
             catch (Exception e)

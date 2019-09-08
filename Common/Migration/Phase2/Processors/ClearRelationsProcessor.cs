@@ -12,10 +12,10 @@ namespace Common.Migration.Phase2.Processors
     /// <summary>
     /// Clears all the relations from the work item.
     /// </summary>
-    [RunOrder(1)]
-    public class ClearAllRelationsProcessor : IPhase2Processor
+    [RunOrder(99)]
+    public class ClearRelationsProcessor : IPhase2Processor
     {
-        static ILogger Logger { get; } = MigratorLogging.CreateLogger<ClearAllRelationsProcessor>();
+        static ILogger Logger { get; } = MigratorLogging.CreateLogger<ClearRelationsProcessor>();
 
         /// <summary>
         /// The name to use for logging.
@@ -23,7 +23,7 @@ namespace Common.Migration.Phase2.Processors
         /// <remarks>
         /// This is also the name used for the description on the hyperlink to the source work item.
         /// </remarks>
-        public string Name => Constants.RelationPhaseClearAllRelations;
+        public string Name => "Clear Relations Processor";
 
         /// <summary>
         /// Returns true if this processor should be invoked.
@@ -43,9 +43,21 @@ namespace Common.Migration.Phase2.Processors
         public async Task<IEnumerable<JsonPatchOperation>> Process(IContext context, WorkItem sourceWorkItem, WorkItem targetWorkItem, object state = null)
         {
             List<JsonPatchOperation> patchOperations = new List<JsonPatchOperation>();
-            if (targetWorkItem.Relations != null)
+            for (int i = 0; i < targetWorkItem.Relations.Count; i++)
             {
-                for (int i = 0; i < targetWorkItem.Relations.Count; i++)
+                bool exists = false;
+                for (int ii = 0; ii < sourceWorkItem.Relations.Count; ii++)
+                {
+                    var targetRelation = targetWorkItem.Relations[i];
+                    var sourceRelation = sourceWorkItem.Relations[i];
+                    if (targetRelation.Rel == sourceRelation.Rel
+                        && targetRelation.Title == sourceRelation.Title)
+                    {
+                        exists = true;
+                        break;
+                    }
+                }
+                if (!exists)
                 {
                     patchOperations.Add(MigrationHelpers.GetRelationRemoveOperation(i));
                 }

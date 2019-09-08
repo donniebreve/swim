@@ -67,5 +67,21 @@ namespace Common
             return this.WorkItemMigrationStateDictionary[sourceID];
         }
 
+        /// <summary>
+        /// Returns the WorkItemMigrationState for the given target work item ID.
+        /// </summary>
+        /// <param name="targetID">The target work item ID.</param>
+        /// <returns>A WorkItemMigrationState, or null.</returns>
+        public WorkItemMigrationState GetWorkItemMigrationStateByTargetID(int targetID)
+        {
+            foreach (var workItemMigrationState in this.WorkItemMigrationStates)
+            {
+                if (workItemMigrationState.TargetId.Value == targetID)
+                {
+                    return workItemMigrationState;
+                }
+            }
+            return null;
+        }
     }
 }

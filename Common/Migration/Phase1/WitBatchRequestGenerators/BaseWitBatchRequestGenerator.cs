@@ -16,7 +16,7 @@ namespace Common.Migration
     {
         static ILogger Logger { get; } = MigratorLogging.CreateLogger<BaseWitBatchRequestGenerator>();
 
-        protected IMigrationContext migrationContext; // stop passing this around
+        protected IMigrationContext migrationContext; // stop passing this around (LOL!)
         protected IBatchMigrationContext batchContext;
 
         // Chose List of tuples instead of Dictionary because this guarantees that the ordering is maintained. Also lets us use custom names for the 2 values rather than key/value.
@@ -100,6 +100,7 @@ namespace Common.Migration
                     KeyValuePair<string, object> fieldProcessedForConfigFields = GetTargetField(sourceField, fieldNamesAlreadyPopulated);
                     KeyValuePair<string, object> preparedField = UpdateProjectNameIfNeededForField(sourceWorkItem, fieldProcessedForConfigFields);
 
+                    // To do: move this to a more appropriate location
                     // If this is an identity field
                     if (this.migrationContext.IdentityFields.Contains(sourceField.Key))
                     {

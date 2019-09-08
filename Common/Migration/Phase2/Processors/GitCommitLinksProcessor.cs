@@ -22,21 +22,21 @@ namespace Common.Migration
             return configuration.MigrateGitLinks;
         }
 
-        public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
+        public async Task Preprocess(IContext context, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
         {
-            
+            // Nothing required
         }
 
-        public async Task<IEnumerable<JsonPatchOperation>> Process(IMigrationContext migrationContext, IBatchMigrationContext batchContext, WorkItem sourceWorkItem, WorkItem targetWorkItem)
+        public async Task<IEnumerable<JsonPatchOperation>> Process(IContext context, WorkItem sourceWorkItem, WorkItem targetWorkItem, object state = null)
         {
             IList<JsonPatchOperation> jsonPatchOperations = new List<JsonPatchOperation>();
-            IEnumerable<WorkItemRelation> sourceGitCommitLinksRelations = GetGitLinksRelationsFromWorkItem(sourceWorkItem, Constants.RelationArtifactLink, migrationContext.Configuration.SourceConnection.Uri);
+            IEnumerable<WorkItemRelation> sourceGitCommitLinksRelations = GetGitLinksRelationsFromWorkItem(sourceWorkItem, Constants.RelationArtifactLink, context.Configuration.SourceConnection.Uri);
 
             if (sourceGitCommitLinksRelations.Any())
             {
                 foreach (WorkItemRelation sourceGitCommitLinkRelation in sourceGitCommitLinksRelations)
                 {
-                    string adjustedUrl = ConvertGitCommitLinkToHyperLink(sourceWorkItem.Id.Value, sourceGitCommitLinkRelation.Url, migrationContext.Configuration.SourceConnection.Uri);
+                    string adjustedUrl = ConvertGitCommitLinkToHyperLink(sourceWorkItem.Id.Value, sourceGitCommitLinkRelation.Url, context.Configuration.SourceConnection.Uri);
                     WorkItemRelation targetGitCommitHyperlinkRelation = GetGitCommitHyperlinkIfExistsOnTarget(targetWorkItem, adjustedUrl);
 
                     if (targetGitCommitHyperlinkRelation != null) // is on target
@@ -104,21 +104,18 @@ namespace Common.Migration
         private static IEnumerable<WorkItemRelation> GetGitLinksRelationsFromWorkItem(WorkItem workItem, string linkType, string account)
         {
             IList<WorkItemRelation> result = new List<WorkItemRelation>();
-
-            if (workItem.Relations != null)
+            if (workItem == null || workItem.Relations == null)
+                return result;
+            foreach (WorkItemRelation relation in workItem.Relations)
             {
-                foreach (WorkItemRelation relation in workItem.Relations)
+                if (relation.Rel == linkType)
                 {
-                    if (relation.Rel == linkType)
+                    if (relation.Attributes != null && relation.Attributes.ContainsKey(Constants.RelationAttributeName) && relation.Attributes[Constants.RelationAttributeName].ToString() == Constants.RelationAttributeGitCommitNameValue)
                     {
-                        if (relation.Attributes != null && relation.Attributes.ContainsKey(Constants.RelationAttributeName) && relation.Attributes[Constants.RelationAttributeName].ToString() == Constants.RelationAttributeGitCommitNameValue)
-                        {
-                            result.Add(relation);
-                        }
+                        result.Add(relation);
                     }
                 }
             }
-
             return result;
         }
 

@@ -28,6 +28,7 @@ namespace Common.Validation
 
         public async Task Validate(IValidationContext validationContext)
         {
+            return;
             var stopwatch = new Stopwatch();
             this._context = validationContext;
             if (validationContext.Configuration.UpdateModifiedWorkItems)
@@ -56,7 +57,7 @@ namespace Common.Validation
                 Dictionary<int, WorkItemMigrationState> targetToWorkItemMigrationState = batchWorkItemMigrationState.ToDictionary(k => k.TargetId.Value, v => v);
 
                 //read the target work items 
-                IList<WorkItem> targetWorkItems = await WorkItemApi.GetWorkItemsAsync(this._context.TargetClient.WorkItemTrackingHttpClient, batchWorkItemMigrationState.Select(a => a.TargetId.Value).ToList(), expand: WorkItemExpand.Relations);
+                IList<WorkItem> targetWorkItems = await WorkItemTrackingApi.GetWorkItemsAsync(this._context.TargetClient.WorkItemTrackingHttpClient, batchWorkItemMigrationState.Select(a => a.TargetId.Value).ToList(), expand: WorkItemExpand.Relations);
 
                 IDictionary<int, WorkItemRelation> targetIdToHyperlinkToSourceRelationMapping = GetTargetIdToHyperlinkToSourceRelationMapping(targetWorkItems, targetToWorkItemMigrationState);
 
@@ -128,6 +129,7 @@ namespace Common.Validation
         /// </summary>
         /// <param name="targetWorkItems"></param>
         /// <param name="targetToWorkItemMigrationState"></param>
+        [Obsolete]
         private void ProcessUpdatedSourceWorkItems(IList<WorkItem> targetWorkItems, Dictionary<int, WorkItemMigrationState> targetToWorkItemMigrationState, IDictionary<int, WorkItemRelation> targetIdToHyperlinkToSourceRelationMapping)
         {
             foreach (WorkItem targetWorkItem in targetWorkItems)
@@ -149,51 +151,52 @@ namespace Common.Validation
 
         private void ProcessUpdatedSourceWorkItem(WorkItem targetWorkItem, WorkItemMigrationState workItemMigrationState, WorkItemRelation hyperlinkToSourceRelation)
         {
-            //get the source rev from the revision dictionary - populated by PostValidateWorkitems
-            int sourceId = workItemMigrationState.SourceId;
-            int sourceRev = workItemMigrationState.SourceRevision;
-            string sourceUrl = workItemMigrationState.SourceUri.ToString();
-            int targetRev = GetRev(this._context, targetWorkItem, sourceId, hyperlinkToSourceRelation);
+            ////get the source rev from the revision dictionary - populated by PostValidateWorkitems
+            //int sourceId = workItemMigrationState.SourceId;
+            //int sourceRev = workItemMigrationState.SourceRevision;
+            //string sourceUrl = workItemMigrationState.SourceUri.ToString();
 
-            workItemMigrationState.Requirement = 0;
+            //int targetRev = GetRev(this._context, targetWorkItem, sourceId, hyperlinkToSourceRelation);
 
-            if (this._context.Configuration.OverwriteExistingWorkItems)
-            {
-                Logger.LogInformation(LogDestination.File, $"Target work item will be updated. Source workItem {sourceId}, Target workitem {targetWorkItem.Id}");
-                this.sourceWorkItemIdsThatHaveBeenUpdated.Add(sourceId);
-                workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase1;
-                workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
-            }
-            else if (this._context.Configuration.UpdateModifiedWorkItems && sourceRev != targetRev)
-            {
-                Logger.LogInformation(LogDestination.File, $"Target work item will be updated. Source workItem {sourceId} Rev {sourceRev} Target workitem {targetWorkItem.Id} Rev {targetRev}");
-                this.sourceWorkItemIdsThatHaveBeenUpdated.Add(sourceId);
-                workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase1;
-                workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
-            }
-            else if (IsPhase2UpdateRequired(workItemMigrationState, targetWorkItem))
-            {
-                workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
-            }
-            else
-            {
-                workItemMigrationState.Requirement = WorkItemMigrationState.RequirementForExisting.None;
-            }
+            //workItemMigrationState.Requirement = 0;
+
+            //if (this._context.Configuration.OverwriteExistingWorkItems)
+            //{
+            //    Logger.LogInformation(LogDestination.File, $"Target work item will be updated. Source workItem {sourceId}, Target workitem {targetWorkItem.Id}");
+            //    this.sourceWorkItemIdsThatHaveBeenUpdated.Add(sourceId);
+            //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase1;
+            //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
+            //}
+            //else if (this._context.Configuration.UpdateModifiedWorkItems && sourceRev != targetRev)
+            //{
+            //    Logger.LogInformation(LogDestination.File, $"Target work item will be updated. Source workItem {sourceId} Rev {sourceRev} Target workitem {targetWorkItem.Id} Rev {targetRev}");
+            //    this.sourceWorkItemIdsThatHaveBeenUpdated.Add(sourceId);
+            //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase1;
+            //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
+            //}
+            //else if (IsPhase2UpdateRequired(workItemMigrationState, targetWorkItem))
+            //{
+            //    workItemMigrationState.Requirement |= WorkItemMigrationState.RequirementForExisting.UpdatePhase2;
+            //}
+            //else
+            //{
+            //    workItemMigrationState.Requirement = WorkItemMigrationState.RequirementForExisting.None;
+            //}
         }
 
         private bool IsPhase2UpdateRequired(WorkItemMigrationState workItemMigrationState, WorkItem targetWorkItem)
         {
             IEnumerable<IPhase2Processor> phase2Processors = ClientHelpers.GetProcessorInstances<IPhase2Processor>(this._context.Configuration);
-            workItemMigrationState.RevAndPhaseStatus = GetRevAndPhaseStatus(targetWorkItem, workItemMigrationState.SourceId);
+            //workItemMigrationState.RevAndPhaseStatus = GetRevAndPhaseStatus(targetWorkItem, workItemMigrationState.SourceId);
 
             // find out if Enabled, see if matches comment from target
             ISet<string> enabledPhaseStatuses = System.Linq.Enumerable.ToHashSet(phase2Processors.Where(a => a.IsEnabled(this._context.Configuration)).Select(b => b.Name));
             enabledPhaseStatuses.Remove(Constants.RelationPhaseClearAllRelations);
 
-            if (enabledPhaseStatuses.IsSubsetOf(workItemMigrationState.RevAndPhaseStatus.PhaseStatus)) // enabled relation phases are already complete for current work item
-            {
-                return false;
-            }
+            //if (enabledPhaseStatuses.IsSubsetOf(workItemMigrationState.RevAndPhaseStatus.PhaseStatus)) // enabled relation phases are already complete for current work item
+            //{
+            //    return false;
+            //}
 
             return true;
         }
@@ -224,7 +227,7 @@ namespace Common.Validation
             var targetAttributes = hyperlinkToSourceRelation.Attributes;
             targetAttributes.TryGetValue(Constants.RelationAttributeComment, out string targetRelationPhaseStatus);
 
-            workItemMigrationState.RevAndPhaseStatus = new RevAndPhaseStatus(targetRelationPhaseStatus);
+            //workItemMigrationState.RevAndPhaseStatus = new RevAndPhaseStatus(targetRelationPhaseStatus);
         }
 
         private bool WorkItemHasBeenUpdatedOnSource(WorkItem targetWorkItem, WorkItemMigrationState workItemMigrationState)

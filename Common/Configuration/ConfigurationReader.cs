@@ -1,9 +1,8 @@
-﻿using System;
-using System.IO;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+﻿using Common.Serialization;
 using Logging;
-using Common.Serialization;
+using Microsoft.Extensions.Logging;
+using System;
+using System.IO;
 
 namespace Common.Configuration
 {

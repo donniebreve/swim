@@ -115,11 +115,12 @@ namespace WiMigrator
             {
                 configuration = ConfigurationReader.LoadFromFile<Configuration, JsonSerializer>(migrate.Value());
                 var validatorContext = new ValidationContext(configuration);
-                using (var heartbeat = new ValidationHeartbeatLogger(validatorContext, configuration.HeartbeatFrequencyInSeconds))
-                {
-                    await new Validator(validatorContext).Validate();
-                    heartbeat.Beat();
-                }
+                //using (var heartbeat = new ValidationHeartbeatLogger(validatorContext, configuration.HeartbeatFrequencyInSeconds))
+                //{
+                //    await new Validator(validatorContext).Validate();
+                //    heartbeat.Beat();
+                //}
+                await new Validator(validatorContext).Validate();
 
                 //TODO: Create a common method to take the validator context and created a migration context
                 var context = new MigrationContext(configuration);
@@ -135,11 +136,12 @@ namespace WiMigrator
                 context.SourceFields = validatorContext.SourceFields;
                 context.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject = validatorContext.FieldsThatRequireSourceProjectToBeReplacedWithTargetProject;
 
-                using (var heartbeat = new MigrationHeartbeatLogger(context, context.Configuration.HeartbeatFrequencyInSeconds))
-                {
-                    await new Migrator(context).Migrate();
-                    heartbeat.Beat();
-                }
+                //using (var heartbeat = new MigrationHeartbeatLogger(context, context.Configuration.HeartbeatFrequencyInSeconds))
+                //{
+                //    await new Migrator(context).Migrate();
+                //    heartbeat.Beat();
+                //}
+                await new Migrator(context).Migrate();
             }
             catch (CommandParsingException e)
             {

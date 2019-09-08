@@ -10,6 +10,12 @@ namespace Common.Serialization.Json
     /// </summary>
     public class JsonSerializer : ISerializer
     {
+        private static JsonSerializerSettings _settings = new JsonSerializerSettings()
+        {
+            NullValueHandling = NullValueHandling.Ignore,
+            MissingMemberHandling = MissingMemberHandling.Ignore
+        };
+
         /// <summary>
         /// Serializes the object to a JSON string.
         /// </summary>
@@ -17,7 +23,7 @@ namespace Common.Serialization.Json
         /// <returns>A JSON string.</returns>
         public string Serialize(object o)
         {
-            return JsonConvert.SerializeObject(o);
+            return JsonConvert.SerializeObject(o, Formatting.Indented);
         }
 
         /// <summary>
@@ -28,7 +34,7 @@ namespace Common.Serialization.Json
         /// <returns>An instantated object of type T.</returns>
         public T Deserialize<T>(string s)
         {
-            return JsonConvert.DeserializeObject<T>(s);
+            return JsonConvert.DeserializeObject<T>(s, _settings);
         }
     }
 }

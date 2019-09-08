@@ -36,35 +36,20 @@ namespace Common.Migration
             return configuration.MigrateComments;
         }
 
-        /// <summary>
-        /// Performs work necessary prior to processing the work item batch.
-        /// </summary>
-        /// <param name="migrationContext">The migration context.</param>
-        /// <param name="batchContext">The batch context.</param>
-        /// <param name="sourceWorkItems">The list of source work items.</param>
-        /// <param name="targetWorkItems">The list of target work items.</param>
-        /// <returns>An awaitable Task.</returns>
-        public async Task Preprocess(IMigrationContext migrationContext, IBatchMigrationContext batchContext, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
+        public async Task Preprocess(IContext context, IList<WorkItem> sourceWorkItems, IList<WorkItem> targetWorkItems)
         {
             // Nothing required
         }
 
-        /// <summary>
-        /// Process the work item batch.
-        /// </summary>
-        /// <param name="migrationContext">The migration context.</param>
-        /// <param name="batchContext">The batch context.</param>
-        /// <param name="sourceWorkItem">The source work item.</param>
-        /// <param name="targetWorkItem">The target work item.</param>
-        /// <returns>A enumerable of JsonPatchOperations.</returns>
-        public async Task<IEnumerable<JsonPatchOperation>> Process(IMigrationContext context, IBatchMigrationContext batchContext, WorkItem sourceWorkItem, WorkItem targetWorkItem)
+        public async Task<IEnumerable<JsonPatchOperation>> Process(IContext context, WorkItem sourceWorkItem, WorkItem targetWorkItem, object state = null)
         {
+            // To do: this is not working. WitBatchRequest with an add on /comments/- does not seem to be functional.
             IList<JsonPatchOperation> jsonPatchOperations = new List<JsonPatchOperation>();
-            var result = await WorkItemApi.GetCommentsAsync(context.SourceClient.WorkItemTrackingHttpClient, sourceWorkItem.Id.Value);
-            foreach (var comment in result.Comments)
-            {
-                jsonPatchOperations.Add(MigrationHelpers.GetCommentAddOperation(comment));
-            }
+            //var result = await WorkItemTrackingApi.GetCommentsAsync(context.SourceClient.WorkItemTrackingHttpClient, sourceWorkItem.Id.Value);
+            //foreach (var comment in result.Comments)
+            //{
+            //    jsonPatchOperations.Add(MigrationHelpers.GetCommentAddOperation(comment));
+            //}
             return jsonPatchOperations;
         }
     }
