@@ -1,68 +1,35 @@
-# Introduction 
-WiMigrator is a command line tool designed with the following goals in mind:
-* Migrate work items from one Azure DevOps/TFS project to another
-* Real world example of how to use the WIT REST APIs
-* Cross platform support
+See the [original project](https://github.com/microsoft/vsts-work-item-migrator) for the base readme.
 
-![Build Status](https://dev.azure.com/vsts-wit/_apis/public/build/definitions/2a08f204-c80c-4f7e-82c8-f27e28f2becd/1/badge)
+# My To Do list
+* Create field mapping that can replace value with regex (Done)
 
-# Features
-* Migrate the latest revision of a work item or set of work items based on the provided query, including:
-  * Work item links (for work items within the query results set) 
-  * Attachments
-  * Git commit links (link to the source git commit)
-  * Work item history (last 200 revisions as an attachment)
-  * Tagging of the source items that have been migrated
+* Clean up the configuration class (Done)
+    * Create an interface
+    
+* Cleanup the WorkItemMigrationState classes (In Progress)
+    * Seems like there are multiple details that can be combined into a single WorkItemMigration object
+        * State
+        * TargetID
+        * RemoteLinks
+        
+* Fix the work item creation / update (Done)
+    * Validation gathers the work items (make this clearer? move this out of validation?)
+    * Updates do not trigger for field updates, only phase 2 processors?
+    * skip-existing: false, to me, says update the target with the source, *i.e. overwrite*
+        * maybe make this clearer (rename skip-existing)
+        * make an overwrite operation
 
-# Getting Started
-## Requirements
-* Source Project on **Azure DevOps** or **TFS 2017 Update 2** or later
-* Target Project on **Azure DevOps** or **TFS 2018** or later
-* Personal access tokens or NTLM for authentication 
-* Bypass rules or Project Collection Administrator permissions required on target project
-* Process metadata **should** be consistent between the processes
-  * Limited field mapping support is provided to map fields from the source to target account
-  * Area/Iteration paths can be defaulted to a specific value when they don't exist on the target
-
-## Running
-WiMigrator supports the following command line options:
-* --validate validates that the metadata between the source and target projects is consistent 
-* --migrate re-runs validation and then migrates the work items 
-
-Migration runs in two parts:
-* Validation
-  * Configuration settings
-  * Process metadata is consistent between projects
-  * Identifies any work items that were previously migrated
-* Migration
-  * Phase 1: Work item fields
-  * Phase 2: Attachments, links, git commit links, history, target move tag
-  * Phase 3: Source move tag
-
-A [sample configuration](WiMigrator/sample-configuration.json) file is provided with [documentation](WiMigrator/migration-configuration.md) of all the settings.
-
-Execution example:
-```
-dotnet run --validate configuration.json
-```
-
-HOWTO [Video](https://www.youtube.com/watch?v=aHbiLYUfomc&feature=youtu.be)
-
-## Limitations:
-  * Artifact links (other than git) are not migrated
-  * Board fields are not migrated
-  * Test artifacts (e.g. test results) are not migrated
-
-# Contributing
-
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.microsoft.com.
-
-When you submit a pull request, a CLA-bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., label, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
-
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+* Create an IdentityMapping option (In Progress, done but needs to be used in more places/fields)
+    * IdentityMapper should run before work item creation / update
+    * Look at the classes that exist for detecting invalid fields
+    * Make something similar for fields with identities
+    * Before work item create or update, replace identity fields with mapping
+    
+* Migrate comments (Done)
+    * Does comment migration happen?
+    * Make identity mapper work here too (In Progress)
+    
+ * Create multiple work item history / comment attachment formats (Done)
+    * JSON is a poor choice for non-technical people (I assume it was the easiest... just upload the response from the api)
+    * Text
+    * Comment (!!!)
