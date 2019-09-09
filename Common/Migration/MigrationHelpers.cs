@@ -138,12 +138,29 @@ namespace Common.Migration
             return jsonPatchOperation;
         }
 
-        public static JsonPatchOperation GetCommentAddOperation(WorkItemComment comment)
+        /// <summary>
+        /// Creates an attachment JsonPatchOperation.
+        /// </summary>
+        /// <param name="operation">The desired operation.</param>
+        /// <param name="index">The relation index, or -</param>
+        /// <param name="attachmentLink">The attachment link information.</param>
+        /// <returns>A new JsonPatchOperation.</returns>
+        public static JsonPatchOperation GetAttachmentOperation(Operation operation, AttachmentLink attachmentLink, string index = "-")
         {
             JsonPatchOperation jsonPatchOperation = new JsonPatchOperation();
-            jsonPatchOperation.Operation = Operation.Add;
-            jsonPatchOperation.Path = $"/comments/-";
-            jsonPatchOperation.Value = comment;
+            jsonPatchOperation.Operation = operation;
+            jsonPatchOperation.Path = $"/{Constants.Relations}/{index}";
+            jsonPatchOperation.Value = new WorkItemRelation
+            {
+                Rel = Constants.AttachedFile,
+                Url = attachmentLink.AttachmentReference.Url,
+                Attributes = new Dictionary<string, object>
+                {
+                    {  Constants.RelationAttributeName, attachmentLink.FileName },
+                    {  Constants.RelationAttributeResourceSize,  attachmentLink.ResourceSize },
+                    {  Constants.RelationAttributeComment,  attachmentLink.Comment }
+                }
+            };
             return jsonPatchOperation;
         }
 
@@ -163,10 +180,9 @@ namespace Common.Migration
                     {  Constants.RelationAttributeComment,  attachmentLink.Comment }
                 }
             };
-
             return jsonPatchOperation;
         }
-        
+
         public static JsonPatchOperation GetRelationRemoveOperation(int existingRelationIndex)
         {
             JsonPatchOperation jsonPatchOperation = new JsonPatchOperation();

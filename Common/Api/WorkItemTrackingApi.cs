@@ -48,6 +48,29 @@ namespace Common.Api
         }
 
         /// <summary>
+        /// Gets the work items comments.
+        /// </summary>
+        /// <param name="client">The WorkItemTrackingHttpClient.</param>
+        /// <param name="text">The desired comment text.</param>
+        /// <param name="project">The project name.</param>
+        /// <param name="workItemID">The work item ID.</param>
+        /// <returns>A WorkItemComments object.</returns>
+        public async static Task<Comment> AddCommentAsync(WorkItemTrackingHttpClient client, string text, string project, int workItemID)
+        {
+            CommentCreate request = new CommentCreate() { Text = text };
+            try
+            {
+                return await _retryPolicy.ExecuteAsync(async () =>
+                    await client.AddCommentAsync(request, project, workItemID));
+            }
+            catch (Exception exception)
+            {
+                LogExceptionToFile(new { request, project, workItemID }, exception);
+                throw;
+            }
+        }
+
+        /// <summary>
         /// Gets the attachment data.
         /// </summary>
         /// <param name="client">The WorkItemTrackingHttpClient.</param>
@@ -55,16 +78,8 @@ namespace Common.Api
         /// <returns>A stream to the attachment data.</returns>
         public async static Task<Stream> GetAttachmentAsync(WorkItemTrackingHttpClient client, Guid guid)
         {
-            try
-            {
-                return await _retryPolicy.ExecuteAsync(async () =>
-                    await client.GetAttachmentContentAsync(guid));
-            }
-            catch (Exception exception)
-            {
-                LogExceptionToFile(new { guid }, exception);
-                throw;
-            }
+            return await _retryPolicy.ExecuteAsync(async () =>
+                await client.GetAttachmentContentAsync(guid));
         }
 
         /// <summary>
@@ -76,16 +91,8 @@ namespace Common.Api
         /// <returns>A WorkItem.</returns>
         public static async Task<WorkItem> GetWorkItemAsync(WorkItemTrackingHttpClient client, int id, IEnumerable<string> fields = null)
         {
-            try
-            {
-                return await _retryPolicy.ExecuteAsync(async () =>
-                    await client.GetWorkItemAsync(id, fields));
-            }
-            catch (Exception exception)
-            {
-                LogExceptionToFile(new { id, fields }, exception);
-                throw;
-            }
+            return await _retryPolicy.ExecuteAsync(async () =>
+                await client.GetWorkItemAsync(id, fields));
         }
 
         /// <summary>
@@ -97,36 +104,33 @@ namespace Common.Api
         /// <returns>A WorkItem.</returns>
         public static async Task<IList<WorkItem>> GetWorkItemsAsync(WorkItemTrackingHttpClient client, IEnumerable<int> ids, IEnumerable<string> fields = null, WorkItemExpand? expand = null)
         {
-            try
-            {
-                return await _retryPolicy.ExecuteAsync(async () =>
-                    await client.GetWorkItemsAsync(ids, fields: fields, expand: expand));
-            }
-            catch (Exception exception)
-            {
-                LogExceptionToFile(new { ids, fields, expand }, exception);
-                throw;
-            }
+            return await _retryPolicy.ExecuteAsync(async () =>
+                await client.GetWorkItemsAsync(ids, fields: fields, expand: expand));
         }
 
         /// <summary>
-        /// Gets the work items comments.
+        /// Gets the work item's comments (newer API method).
         /// </summary>
         /// <param name="client">The WorkItemTrackingHttpClient.</param>
-        /// <param name="id">The work item ID.</param>
+        /// <param name="project">The project name.</param>
+        /// <param name="workItemID">The work item ID.</param>
         /// <returns>A WorkItemComments object.</returns>
-        public async static Task<WorkItemComments> GetCommentsAsync(WorkItemTrackingHttpClient client, int id)
+        public async static Task<CommentList> GetCommentsAsync(WorkItemTrackingHttpClient client, string project, int workItemID)
         {
-            try
-            {
-                return await _retryPolicy.ExecuteAsync(async () =>
-                    await client.GetCommentsAsync(id));
-            }
-            catch (Exception exception)
-            {
-                LogExceptionToFile(new { id }, exception);
-                throw;
-            }
+            return await _retryPolicy.ExecuteAsync(async () =>
+                await client.GetCommentsAsync(project, workItemID));
+        }
+
+        /// <summary>
+        /// Gets the work item's comments (older API method).
+        /// </summary>
+        /// <param name="client">The WorkItemTrackingHttpClient.</param>
+        /// <param name="workItemID">The work item ID.</param>
+        /// <returns>A WorkItemComments object.</returns>
+        public async static Task<WorkItemComments> GetCommentsAsync(WorkItemTrackingHttpClient client, int workItemID)
+        {
+            return await _retryPolicy.ExecuteAsync(async () =>
+                await client.GetCommentsAsync(workItemID));
         }
 
         /// <summary>
@@ -139,16 +143,8 @@ namespace Common.Api
         /// <returns>A WorkItem.</returns>
         public static async Task<List<WorkItem>> GetRevisionsAsync(WorkItemTrackingHttpClient client, int id, int? top = null, int? skip = null, WorkItemExpand? expand = null)
         {
-            try
-            {
-                return await _retryPolicy.ExecuteAsync(async () =>
-                    await client.GetRevisionsAsync(id, top: top, skip: skip, expand: expand));
-            }
-            catch (Exception exception)
-            {
-                LogExceptionToFile(new { id, top, skip, expand }, exception);
-                throw;
-            }
+            return await _retryPolicy.ExecuteAsync(async () =>
+                await client.GetRevisionsAsync(id, top: top, skip: skip, expand: expand));
         }
 
         /// <summary>
@@ -161,16 +157,8 @@ namespace Common.Api
         /// <returns>A list of the work item updates.</returns>
         public async static Task<List<WorkItemUpdate>> GetUpdatesAsync(WorkItemTrackingHttpClient client, int id, int? top = null, int? skip = null)
         {
-            try
-            {
-                return await _retryPolicy.ExecuteAsync(async () =>
-                    await client.GetUpdatesAsync(id, top: top, skip: skip));
-            }
-            catch (Exception exception)
-            {
-                LogExceptionToFile(new { id, top, skip }, exception);
-                throw;
-            }
+            return await _retryPolicy.ExecuteAsync(async () =>
+                await client.GetUpdatesAsync(id, top: top, skip: skip));
         }
 
         /// <summary>
@@ -182,16 +170,8 @@ namespace Common.Api
         /// <returns>A QueryHierarchyItem.</returns>
         public static async Task<QueryHierarchyItem> GetQueryAsync(WorkItemTrackingHttpClient client, string project, string query)
         {
-            try
-            {
-                return await _retryPolicy.ExecuteAsync(async () =>
-                    await client.GetQueryAsync(project, query, QueryExpand.Wiql));
-            }
-            catch (Exception exception)
-            {
-                LogExceptionToFile(new { project, query, expand = QueryExpand.Wiql }, exception);
-                throw;
-            }
+            return await _retryPolicy.ExecuteAsync(async () =>
+                await client.GetQueryAsync(project, query, QueryExpand.Wiql));
         }
 
         /// <summary>
@@ -204,16 +184,8 @@ namespace Common.Api
         /// <returns>A WorkItemQueryResult.</returns>
         public static async Task<WorkItemQueryResult> QueryByWiqlAsync(WorkItemTrackingHttpClient client, Wiql wiql, string project, int? top = null)
         {
-            try
-            {
-                return await _retryPolicy.ExecuteAsync(async () =>
-                    await client.QueryByWiqlAsync(wiql, project, top: top));
-            }
-            catch (Exception exception)
-            {
-                LogExceptionToFile(new { wiql, project, top }, exception);
-                throw;
-            }
+            return await _retryPolicy.ExecuteAsync(async () =>
+                await client.QueryByWiqlAsync(wiql, project, top: top));
         }
 
         /// <summary>
@@ -224,14 +196,30 @@ namespace Common.Api
         /// <returns>An ArtifactUriQueryResult.</returns>
         public async static Task<ArtifactUriQueryResult> QueryWorkItemsForArtifactUrisAsync(WorkItemTrackingHttpClient client, ArtifactUriQuery artifactUriQuery)
         {
+            return await _retryPolicy.ExecuteAsync(async () =>
+                await client.QueryWorkItemsForArtifactUrisAsync(artifactUriQuery));
+        }
+
+        /// <summary>
+        /// Updates the comment on the desired work item.
+        /// </summary>
+        /// <param name="client">The WorkItemTrackingHttpClient.</param>
+        /// <param name="text">The desired comment text.</param>
+        /// <param name="project">The project name.</param>
+        /// <param name="workItemID">The work item ID.</param>
+        /// <param name="commentID">The comment ID.</param>
+        /// <returns>A WorkItemComments object.</returns>
+        public async static Task<Comment> UpdateCommentAsync(WorkItemTrackingHttpClient client, string text, string project, int workItemID, int commentID)
+        {
+            CommentUpdate request = new CommentUpdate() { Text = text };
             try
             {
                 return await _retryPolicy.ExecuteAsync(async () =>
-                    await client.QueryWorkItemsForArtifactUrisAsync(artifactUriQuery));
+                    await client.UpdateCommentAsync(request, project, workItemID, commentID));
             }
             catch (Exception exception)
             {
-                LogExceptionToFile(new { artifactUriQuery }, exception);
+                LogExceptionToFile(new { request, project, workItemID, commentID }, exception);
                 throw;
             }
         }

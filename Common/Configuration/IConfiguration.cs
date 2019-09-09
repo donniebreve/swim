@@ -57,14 +57,17 @@ namespace Common.Configuration
         [DefaultValue(false)]
         bool MigrateComments { get; set; }
 
+        [DefaultValue(".json")]
+        string CommentAttachmentFormat { get; set; }
+
         [DefaultValue(false)]
         bool MigrateHistory { get; set; }
 
-        [DefaultValue(false)]
+        [DefaultValue(".json")]
         string HistoryAttachmentFormat { get; set; }
 
-        [DefaultValue(200)]
-        int HistoryLimit { get; set; }
+        [DefaultValue(null)]
+        int? HistoryLimit { get; set; }
 
         [DefaultValue(false)]
         bool MigrateGitLinks { get; set; }

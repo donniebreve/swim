@@ -24,12 +24,20 @@
   "migrate-identities": false,
   "remove-emojis-from-identity-display-names": false,
   "identity-mappings": {},
-  "migrate-comments":  false,
-  "migrate-history": false,
-  "history-limit": 200,
+
+  "migrate-comments": true,
+  "comment-attachment-format": ".json",
+
+  "migrate-history": true,
+  "history-attachment-format": ".json",
+  "history-limit": null,
+
   "migrate-git-links": false,
+
   "migrate-attachments": false,
+
   "migrate-links": true,
+
   "source-post-move-tag": "6F078B6C-2A96-453B-A7C3-EACE6E63BB97",
   "target-post-move-tag": "6F078B6C-2A96-453B-A7C3-EACE6E63BB97",
   "skip-work-items-with-type-missing-fields": false,

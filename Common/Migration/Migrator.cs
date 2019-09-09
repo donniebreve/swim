@@ -139,8 +139,6 @@ namespace Common.Migration
                         var operations = await processor.Process(_context, sourceWorkItem, targetWorkItem);
                         patchOperations.AddRange(operations);
                     }
-
-                    // Create the WitBatchRequest
                     if (patchOperations.Count > 0)
                     {
                         // The WitBatchRequest functionality does not return the appropriate number of responses

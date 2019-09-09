@@ -72,6 +72,10 @@ namespace Common.Configuration.Json
         [DefaultValue(false)]
         public bool MigrateComments { get; set; }
 
+        [JsonProperty(PropertyName = "comment-attachment-format", DefaultValueHandling = DefaultValueHandling.Populate)]
+        [DefaultValue(".json")]
+        public string CommentAttachmentFormat { get; set; }
+
         [JsonProperty(PropertyName = "migrate-history", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]
         public bool MigrateHistory { get; set; }
@@ -81,8 +85,8 @@ namespace Common.Configuration.Json
         public string HistoryAttachmentFormat { get; set; }
 
         [JsonProperty(PropertyName = "history-limit", DefaultValueHandling = DefaultValueHandling.Populate)]
-        [DefaultValue(200)]
-        public int HistoryLimit { get; set; }
+        [DefaultValue(null)]
+        public int? HistoryLimit { get; set; }
 
         [JsonProperty(PropertyName = "migrate-git-links", DefaultValueHandling = DefaultValueHandling.Populate)]
         [DefaultValue(false)]
